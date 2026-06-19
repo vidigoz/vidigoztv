@@ -1,0 +1,32 @@
+[build]
+  publish   = "site"
+  functions = "netlify/functions"
+
+# ── Taller: cada herramienta vive en su subcarpeta dentro de site/ ────────────
+[[redirects]]
+  from   = "/taller/vidiclip"
+  to     = "/vidiclip/index.html"
+  status = 200
+
+[[redirects]]
+  from   = "/taller/vidiserial"
+  to     = "/vidiserial/index.html"
+  status = 200
+
+[[redirects]]
+  from   = "/taller/vidiwrite"
+  to     = "/vidiwrite/index.html"
+  status = 200
+
+# ── SPA fallback — debe ir al final ──────────────────────────────────────────
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200
+
+# ── Headers de seguridad ──────────────────────────────────────────────────────
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"

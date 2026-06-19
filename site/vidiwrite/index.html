@@ -1,0 +1,1067 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>vidiwriter — Ayudante en redaccion de historias</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #FDFFFC;
+  --parch: #0a0c24;
+  --parch2: #0d1030;
+  --parch3: #111440;
+  --sepia: #8fa8bc;
+  --sepia2: #adc2d4;
+  --red: #CF5C36;
+  --green: #2EC4B6;
+  --panel: #080a1e;
+  --border: #577590;
+  --shadow: rgba(5,5,23,0.4);
+  --highlight: #0f1235;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --serif: 'Playfair Display', serif;
+}
+
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: var(--sans);
+  background: var(--parch);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+/* ── TOP BAR ──────────────────────────────────────────── */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 20px;
+  height: 52px;
+  background: var(--sepia2);
+  border-bottom: 2px solid var(--sepia);
+  flex-shrink: 0;
+}
+
+#topbar h1 {
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  color: var(--parch);
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+#topbar h1 span { color: #2EC4B6; font-style: italic; }
+
+.topbtn {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  padding: 6px 14px;
+  border: 1.5px solid rgba(255,255,255,0.3);
+  border-radius: 3px;
+  background: rgba(255,255,255,0.1);
+  color: var(--parch);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-transform: uppercase;
+}
+.topbtn:hover { background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); }
+.topbtn.primary { background: var(--red); border-color: var(--red); }
+.topbtn.primary:hover { background: #b84d29; }
+.topbtn.notion { background: #229e93; border-color: #229e93; }
+.topbtn.notion:hover { background: #1a7f76; }
+
+/* ── MAIN LAYOUT ──────────────────────────────────────── */
+#main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── LEFT EDITOR ──────────────────────────────────────── */
+#editor-col {
+  display: flex;
+  flex-direction: column;
+  border-right: 2px solid var(--border);
+  overflow: hidden;
+}
+
+#editor-header {
+  padding: 10px 16px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--parch2);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+#editor-header label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sepia2);
+}
+
+#story-title {
+  flex: 1;
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 4px 10px;
+  background: var(--highlight);
+  color: var(--ink);
+  outline: none;
+}
+#story-title:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(46,196,182,0.15); }
+
+#editor-wrap {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+#story-input {
+  width: 100%;
+  height: 100%;
+  padding: 20px 24px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.85;
+  border: none;
+  resize: none;
+  background: var(--panel);
+  color: var(--ink);
+  outline: none;
+  overflow-y: auto;
+}
+
+#story-input::placeholder { color: #3d5266; font-style: italic; }
+
+/* bracket highlighting overlay */
+#highlight-overlay {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  pointer-events: none;
+  padding: 20px 24px;
+  font-family: var(--serif);
+  font-size: 1.05rem;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+  color: transparent;
+}
+
+.bracket-tag {
+  background: rgba(207, 92, 54, 0.18);
+  border-radius: 2px;
+  border-bottom: 2px solid var(--red);
+  color: transparent;
+}
+
+#char-count {
+  padding: 4px 16px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--sepia);
+  background: var(--parch2);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/* ── RIGHT PANEL ──────────────────────────────────────── */
+#right-col {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--panel);
+}
+
+/* TABS */
+#tabs {
+  display: flex;
+  border-bottom: 2px solid var(--border);
+  background: var(--parch2);
+  flex-shrink: 0;
+}
+
+.tab {
+  flex: 1;
+  padding: 10px 4px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: center;
+  cursor: pointer;
+  color: var(--sepia);
+  border-bottom: 3px solid transparent;
+  transition: all 0.15s;
+  user-select: none;
+}
+.tab:hover { color: var(--sepia2); background: rgba(255,255,255,0.04); }
+.tab.active { color: var(--sepia2); border-bottom-color: var(--red); font-weight: 500; }
+
+/* TAB PANELS */
+.tabpanel { display: none; flex-direction: column; flex: 1; overflow: hidden; }
+.tabpanel.active { display: flex; }
+
+/* ── SUGGESTIONS PANEL ────────────────────────────────── */
+#suggestions-panel { padding: 14px; gap: 14px; overflow-y: auto; }
+
+.slot-card {
+  background: var(--highlight);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  animation: slideIn 0.25s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.slot-header {
+  padding: 8px 12px;
+  background: var(--parch3);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slot-num {
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  background: var(--red);
+  color: white;
+  border-radius: 50%;
+  width: 18px; height: 18px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.slot-query {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--sepia2);
+  font-style: italic;
+  flex: 1;
+}
+
+.slot-options { padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+
+.option-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1.5px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--ink);
+  transition: all 0.12s;
+}
+.option-btn:hover { background: rgba(87,117,144,0.15); border-color: var(--border); }
+.option-btn.selected { background: rgba(46,196,182,0.12); border-color: var(--green); }
+
+.option-check {
+  width: 16px; height: 16px;
+  border: 1.5px solid var(--border);
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem;
+  transition: all 0.12s;
+}
+.option-btn.selected .option-check {
+  background: var(--green);
+  border-color: var(--green);
+  color: white;
+}
+
+.loading-dots {
+  display: flex; gap: 5px; padding: 12px;
+  align-items: center;
+}
+.loading-dots span {
+  width: 7px; height: 7px;
+  background: var(--sepia);
+  border-radius: 50%;
+  animation: dot 1.2s infinite ease-in-out;
+}
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dot { 0%,80%,100%{transform:scale(0.7);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+.no-brackets {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--sepia);
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+/* ── RESULT PANEL ─────────────────────────────────────── */
+#result-panel { padding: 14px; gap: 10px; }
+
+#result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#result-header h3 {
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  color: var(--sepia2);
+}
+
+.icon-btn {
+  width: 28px; height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--parch2);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.85rem;
+  transition: all 0.12s;
+}
+.icon-btn:hover { background: var(--parch3); }
+
+#result-box {
+  flex: 1;
+  background: var(--highlight);
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  font-family: var(--serif);
+  font-size: 0.9rem;
+  line-height: 1.8;
+  color: var(--ink);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  resize: none;
+  outline: none;
+  width: 100%;
+}
+
+#result-box:focus { border-color: var(--green); box-shadow: 0 0 0 2px rgba(46,196,182,0.12); }
+
+#result-box.empty {
+  color: var(--sepia);
+  font-style: italic;
+  opacity: 0.6;
+}
+
+/* ── SETTINGS PANEL ───────────────────────────────────── */
+#settings-panel {
+  padding: 16px;
+  gap: 14px;
+  overflow-y: auto;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.setting-group label {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--sepia2);
+}
+
+.setting-group input, .setting-group select {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--highlight);
+  color: var(--ink);
+  outline: none;
+  transition: border 0.15s;
+}
+.setting-group input:focus, .setting-group select:focus {
+  border-color: var(--green);
+  box-shadow: 0 0 0 2px rgba(46,196,182,0.12);
+}
+
+.setting-divider {
+  height: 1px;
+  background: var(--border);
+  opacity: 0.5;
+  margin: 2px 0;
+}
+
+.setting-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.setting-row .setting-group { flex: 1; }
+
+.inline-btn {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 7px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--parch2);
+  color: var(--sepia2);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s;
+}
+.inline-btn:hover { background: var(--parch3); border-color: var(--sepia); }
+
+.setting-note {
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  color: var(--sepia);
+  opacity: 0.8;
+  font-style: italic;
+}
+
+.save-settings-btn {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 9px 0;
+  width: 100%;
+  border: 1.5px solid var(--green);
+  border-radius: 4px;
+  background: rgba(46,196,182,0.1);
+  color: var(--green);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.save-settings-btn:hover { background: rgba(46,196,182,0.22); }
+
+/* status badge */
+#status-bar {
+  padding: 5px 14px;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  color: var(--sepia);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--parch2);
+  min-height: 24px;
+}
+#status-bar.error { color: var(--red); }
+#status-bar.ok { color: var(--green); }
+
+/* ── COLOR PICKER ─────────────────────────────────────── */
+.color-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+.color-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.color-row input[type="color"] {
+  width: 44px;
+  height: 44px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+  background: var(--highlight);
+  cursor: pointer;
+  outline: none;
+}
+.color-row input[type="color"]:hover { border-color: var(--green); }
+.color-row span {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--sepia2);
+}
+
+/* scrollbars */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1e2550; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border); }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <h1>Story<span>Forge</span></h1>
+  <button class="topbtn primary" onclick="runAnalysis()">▶ Confirmar</button>
+  <button class="topbtn" onclick="buildFinal()">✦ Integrar Historia</button>
+  <button class="topbtn notion" onclick="publishToNotion()">N↑ Notion</button>
+  <button class="topbtn" onclick="switchTab('settings')">⚙ Config</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- LEFT: EDITOR -->
+  <div id="editor-col">
+    <div id="editor-header">
+      <label>Título</label>
+      <input type="text" id="story-title" placeholder="Sin título…">
+    </div>
+    <div id="editor-wrap">
+      <textarea id="story-input"
+        placeholder="Escribe tu historia aquí… Usa [[descripción]] para marcar los fragmentos que quieres que la IA rellene.&#10;&#10;Ejemplo: Era el año 1344 en las orillas de [[un bosque cercano a Milán en esa época]]…"
+        spellcheck="true"
+        oninput="onEditorInput()"
+      ></textarea>
+      <div id="highlight-overlay" aria-hidden="true"></div>
+    </div>
+    <div id="char-count">0 caracteres · 0 palabras · 0 marcadores [[…]]</div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div id="right-col">
+    <div id="tabs">
+      <div class="tab active" data-tab="suggestions" onclick="switchTab('suggestions')">Sugerencias</div>
+      <div class="tab" data-tab="result" onclick="switchTab('result')">Historia Final</div>
+      <div class="tab" data-tab="settings" onclick="switchTab('settings')">Config</div>
+    </div>
+
+    <!-- SUGGESTIONS -->
+    <div class="tabpanel active" id="suggestions-panel">
+      <div class="no-brackets" id="empty-msg">Escribe tu historia y agrega marcadores [[…]]<br>luego presiona <strong>Confirmar</strong></div>
+    </div>
+
+    <!-- RESULT -->
+    <div class="tabpanel" id="result-panel">
+      <div id="result-header">
+        <h3>Historia Integrada</h3>
+        <div style="display:flex;gap:6px;">
+          <button class="icon-btn" title="Copiar" onclick="copyResult()">📋</button>
+          <button class="icon-btn" title="Limpiar" onclick="clearResult()">✕</button>
+        </div>
+      </div>
+      <textarea id="result-box" class="empty" placeholder="Haz clic en &quot;Integrar Historia&quot; o pega tu historia aquí…" spellcheck="true" oninput="this.classList.remove('empty')"></textarea>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="tabpanel" id="settings-panel">
+      <div class="setting-group">
+        <label>Anthropic API Key</label>
+        <input type="password" id="cfg-apikey" placeholder="sk-ant-…">
+      </div>
+      <div class="setting-group">
+        <label>Modelo</label>
+        <select id="cfg-model">
+          <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (recomendado)</option>
+          <option value="claude-opus-4-20250514">Claude Opus 4</option>
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rápido)</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Número de sugerencias por marcador</label>
+        <select id="cfg-count">
+          <option value="3">3 opciones</option>
+          <option value="4">4 opciones</option>
+          <option value="5" selected>5 opciones</option>
+        </select>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <div class="setting-group">
+        <label>Notion Integration Token</label>
+        <input type="password" id="cfg-notion-token" placeholder="secret_…">
+      </div>
+      <div class="setting-row">
+        <div class="setting-group">
+          <label>Database ID de Notion</label>
+          <input type="text" id="cfg-notion-db" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        </div>
+        <button class="inline-btn" onclick="testNotion()">Probar</button>
+      </div>
+      <div class="setting-group">
+        <label>Etiqueta / Tags (separados por coma)</label>
+        <input type="text" id="cfg-notion-tags" placeholder="Historia, IA, Ficción">
+      </div>
+      <p class="setting-note">El título de la historia se usará como nombre de página en Notion. El contenido se sube como cuerpo de la página.</p>
+
+      <div class="setting-divider"></div>
+
+      <!-- COLORES -->
+      <div class="setting-group">
+        <label>Colores de la interfaz</label>
+      </div>
+      <div class="color-grid">
+        <div class="color-row">
+          <input type="color" id="clr-panel"     title="Fondo principal">
+          <span>Fondo</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-topbar"    title="Topbar">
+          <span>Topbar</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-ink"       title="Texto principal">
+          <span>Texto</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-border"    title="Bordes">
+          <span>Bordes</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-red"       title="Acento primario">
+          <span>Acento 1</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-green"     title="Acento secundario">
+          <span>Acento 2</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="inline-btn" style="flex:1" onclick="resetColors()">Restablecer</button>
+        <button class="inline-btn" style="flex:1;border-color:var(--green);color:var(--green)" onclick="saveColors()">Guardar colores</button>
+      </div>
+
+      <div class="setting-divider"></div>
+
+      <button class="save-settings-btn" onclick="saveSettings()">Guardar Configuración</button>
+    </div>
+
+    <div id="status-bar">Listo</div>
+  </div>
+</div>
+
+<script>
+// ── STATE ───────────────────────────────────────────────
+const state = {
+  slots: [],      // { index, query, options:[], selected:null }
+  settings: {}
+};
+
+// ── LOAD SETTINGS ───────────────────────────────────────
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem('sf_settings') || '{}');
+  state.settings = s;
+  if (s.apikey)      document.getElementById('cfg-apikey').value = s.apikey;
+  if (s.model)       document.getElementById('cfg-model').value = s.model;
+  if (s.count)       document.getElementById('cfg-count').value = s.count;
+  if (s.notionToken) document.getElementById('cfg-notion-token').value = s.notionToken;
+  if (s.notionDb)    document.getElementById('cfg-notion-db').value = s.notionDb;
+  if (s.notionTags)  document.getElementById('cfg-notion-tags').value = s.notionTags;
+}
+
+function saveSettings() {
+  const s = {
+    apikey:      document.getElementById('cfg-apikey').value.trim(),
+    model:       document.getElementById('cfg-model').value,
+    count:       document.getElementById('cfg-count').value,
+    notionToken: document.getElementById('cfg-notion-token').value.trim(),
+    notionDb:    document.getElementById('cfg-notion-db').value.trim(),
+    notionTags:  document.getElementById('cfg-notion-tags').value.trim()
+  };
+  localStorage.setItem('sf_settings', JSON.stringify(s));
+  state.settings = s;
+  setStatus('ok', '✓ Configuración guardada');
+}
+
+// ── TABS ────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tabpanel').forEach(p => p.classList.toggle('active', p.id === name + '-panel'));
+}
+
+// ── EDITOR INPUT ────────────────────────────────────────
+function onEditorInput() {
+  updateHighlight();
+  updateCharCount();
+}
+
+function updateHighlight() {
+  const text = document.getElementById('story-input').value;
+  const overlay = document.getElementById('highlight-overlay');
+  const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const highlighted = escaped.replace(/\[\[([^\]]*)\]\]/g,
+    '<span class="bracket-tag">[[$1]]</span>');
+  overlay.innerHTML = highlighted;
+}
+
+function updateCharCount() {
+  const text = document.getElementById('story-input').value;
+  const chars = text.length;
+  const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+  const brackets = (text.match(/\[\[[^\]]*\]\]/g) || []).length;
+  document.getElementById('char-count').textContent =
+    `${chars} caracteres · ${words} palabras · ${brackets} marcadores [[…]]`;
+}
+
+function extractBrackets(text) {
+  const re = /\[\[([^\]]*)\]\]/g;
+  const results = [];
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    results.push({ index: results.length, query: m[1].trim(), full: m[0] });
+  }
+  return results;
+}
+
+// ── ANALYSIS ────────────────────────────────────────────
+async function runAnalysis() {
+  const text = document.getElementById('story-input').value;
+  const brackets = extractBrackets(text);
+
+  if (!brackets.length) {
+    setStatus('error', '⚠ No hay marcadores [[…]] en la historia');
+    return;
+  }
+
+  const apiKey = state.settings.apikey;
+  if (!apiKey) {
+    setStatus('error', '⚠ Agrega tu API Key en Config');
+    switchTab('settings');
+    return;
+  }
+
+  switchTab('suggestions');
+  const panel = document.getElementById('suggestions-panel');
+  document.getElementById('empty-msg')?.remove();
+  panel.innerHTML = '';
+
+  state.slots = brackets.map(b => ({ ...b, options: [], selected: null }));
+
+  for (const slot of state.slots) {
+    const card = createSlotCard(slot);
+    panel.appendChild(card);
+    await fetchSuggestions(slot, card, text);
+  }
+}
+
+function createSlotCard(slot) {
+  const card = document.createElement('div');
+  card.className = 'slot-card';
+  card.id = `slot-${slot.index}`;
+  card.innerHTML = `
+    <div class="slot-header">
+      <div class="slot-num">${slot.index + 1}</div>
+      <div class="slot-query">${slot.query}</div>
+    </div>
+    <div class="loading-dots"><span></span><span></span><span></span></div>
+  `;
+  return card;
+}
+
+async function fetchSuggestions(slot, card, fullText) {
+  const count = state.settings.count || 5;
+  const model = state.settings.model || 'claude-sonnet-4-20250514';
+
+  const system = `Eres un asistente de escritura creativa especializado en sugerencias históricamente precisas y narrativamente ricas. Responde SOLO con JSON válido, sin texto extra ni backticks.`;
+
+  const prompt = `Historia completa (contexto):
+"""
+${fullText}
+"""
+
+El escritor necesita opciones para el marcador: "${slot.query}"
+
+Devuelve exactamente ${count} opciones como JSON:
+{"options": ["opción 1", "opción 2", "opción 3"...]}
+
+Cada opción debe ser concisa (2-6 palabras), históricamente apropiada y encajar naturalmente en el contexto de la historia.`;
+
+  try {
+    const resp = await fetch('/.netlify/functions/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: state.settings.apikey,
+        model,
+        system,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 512
+      })
+    });
+    const data = await resp.json();
+    const raw = data.content?.[0]?.text || '{"options":[]}';
+    const clean = raw.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+    slot.options = parsed.options || [];
+  } catch (e) {
+    slot.options = ['Error al obtener opciones'];
+  }
+
+  // Render options
+  const optionsDiv = document.createElement('div');
+  optionsDiv.className = 'slot-options';
+  slot.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<div class="option-check"></div><span>${opt}</span>`;
+    btn.onclick = () => selectOption(slot, i, card);
+    optionsDiv.appendChild(btn);
+  });
+
+  card.querySelector('.loading-dots').replaceWith(optionsDiv);
+}
+
+function selectOption(slot, index, card) {
+  slot.selected = index;
+  card.querySelectorAll('.option-btn').forEach((btn, i) => {
+    btn.classList.toggle('selected', i === index);
+    if (i === index) btn.querySelector('.option-check').textContent = '✓';
+    else btn.querySelector('.option-check').textContent = '';
+  });
+  setStatus('', `Seleccionada opción ${index + 1} para marcador "${slot.query}"`);
+}
+
+// ── BUILD FINAL ─────────────────────────────────────────
+async function buildFinal() {
+  const text = document.getElementById('story-input').value;
+  if (!state.slots.length) { setStatus('error', '⚠ Primero haz clic en Confirmar'); return; }
+
+  const unselected = state.slots.filter(s => s.selected === null);
+  if (unselected.length) {
+    setStatus('error', `⚠ Selecciona una opción para ${unselected.length} marcador(es)`);
+    return;
+  }
+
+  // Replace brackets with selections
+  let composed = text;
+  for (const slot of state.slots) {
+    composed = composed.replace(slot.full, slot.options[slot.selected]);
+  }
+
+  switchTab('result');
+  const box = document.getElementById('result-box');
+  box.className = '';
+  box.value = '✦ Integrando con IA…';
+
+  const model = state.settings.model || 'claude-sonnet-4-20250514';
+
+  const prompt = `Tienes esta historia con las opciones ya integradas. Pule ligeramente el texto para que fluya de forma natural, sin cambiar el contenido ni agregar información nueva. Mantén el tono, época y estilo del autor. Devuelve solo la historia final, sin comentarios.
+
+Historia:
+${composed}`;
+
+  try {
+    const resp = await fetch('/.netlify/functions/claude', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        apiKey: state.settings.apikey,
+        model,
+        system: 'Eres un editor literario. Solo devuelves el texto pulido, sin explicaciones.',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 2048
+      })
+    });
+    const data = await resp.json();
+    const result = data.content?.[0]?.text || composed;
+    box.value = result;
+    setStatus('ok', '✓ Historia integrada correctamente');
+  } catch (e) {
+    box.value = composed;
+    setStatus('', 'Historia lista (sin pulir)');
+  }
+}
+
+// ── NOTION ──────────────────────────────────────────────
+async function publishToNotion() {
+  const { notionToken, notionDb, apikey, model } = state.settings;
+  if (!notionToken || !notionDb) {
+    setStatus('error', '⚠ Configura Notion Token y Database ID');
+    switchTab('settings');
+    return;
+  }
+  if (!apikey) {
+    setStatus('error', '⚠ Agrega tu API Key de Claude en Config');
+    switchTab('settings');
+    return;
+  }
+
+  const box = document.getElementById('result-box');
+  const content = box.value.trim();
+
+  if (!content || box.classList.contains('empty')) {
+    setStatus('error', '⚠ Primero genera la historia final');
+    return;
+  }
+
+  setStatus('', '↑ Analizando historia y subiendo a Notion…');
+
+  try {
+    const resp = await fetch('/.netlify/functions/notion/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        notionToken,
+        databaseId: notionDb,
+        content,
+        apiKey: apikey,
+        model: model || 'claude-sonnet-4-20250514'
+      })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      setStatus('ok', `✓ Publicado en Notion — ${data.url}`);
+    } else {
+      setStatus('error', `✕ Error Notion: ${data.error}`);
+    }
+  } catch (e) {
+    setStatus('error', `✕ ${e.message}`);
+  }
+}
+
+async function testNotion() {
+  const token = document.getElementById('cfg-notion-token').value.trim();
+  if (!token) { setStatus('error', '⚠ Ingresa el Notion Token'); return; }
+  setStatus('', 'Probando conexión Notion…');
+  try {
+    const resp = await fetch('/.netlify/functions/notion/databases', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notionToken: token })
+    });
+    const dbs = await resp.json();
+    if (dbs.error) throw new Error(dbs.error);
+    setStatus('ok', `✓ Conectado — ${dbs.length} bases de datos encontradas`);
+  } catch (e) {
+    setStatus('error', `✕ ${e.message}`);
+  }
+}
+
+// ── UTILS ───────────────────────────────────────────────
+function copyResult() {
+  const text = document.getElementById('result-box').value;
+  navigator.clipboard.writeText(text).then(() => setStatus('ok', '✓ Copiado al portapapeles'));
+}
+
+function clearResult() {
+  const box = document.getElementById('result-box');
+  box.className = 'empty';
+  box.value = '';
+}
+
+function setStatus(type, msg) {
+  const bar = document.getElementById('status-bar');
+  bar.textContent = msg;
+  bar.className = type;
+}
+
+// ── COLORS ──────────────────────────────────────────────
+const DEFAULT_COLORS = {
+  panel:  '#080a1e',
+  topbar: '#0d1030',
+  ink:    '#FDFFFC',
+  border: '#577590',
+  red:    '#CF5C36',
+  green:  '#2EC4B6'
+};
+
+function applyColors(c) {
+  const r = document.documentElement.style;
+  r.setProperty('--panel',    c.panel);
+  r.setProperty('--parch',    c.panel);
+  r.setProperty('--parch2',   c.topbar);
+  r.setProperty('--parch3',   adjustBrightness(c.topbar, -10));
+  r.setProperty('--highlight', adjustBrightness(c.panel, 8));
+  r.setProperty('--ink',      c.ink);
+  r.setProperty('--border',   c.border);
+  r.setProperty('--sepia',    c.border);
+  r.setProperty('--sepia2',   adjustBrightness(c.border, 20));
+  r.setProperty('--red',      c.red);
+  r.setProperty('--green',    c.green);
+}
+
+function adjustBrightness(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, Math.max(0, (n >> 16) + pct));
+  const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + pct));
+  const b = Math.min(255, Math.max(0, (n & 0xff) + pct));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function loadColors() {
+  const saved = JSON.parse(localStorage.getItem('sf_colors') || 'null') || DEFAULT_COLORS;
+  document.getElementById('clr-panel').value   = saved.panel;
+  document.getElementById('clr-topbar').value  = saved.topbar;
+  document.getElementById('clr-ink').value     = saved.ink;
+  document.getElementById('clr-border').value  = saved.border;
+  document.getElementById('clr-red').value     = saved.red;
+  document.getElementById('clr-green').value   = saved.green;
+  applyColors(saved);
+
+  ['panel','topbar','ink','border','red','green'].forEach(key => {
+    document.getElementById('clr-' + key).addEventListener('input', () => {
+      applyColors(readColorInputs());
+    });
+  });
+}
+
+function readColorInputs() {
+  return {
+    panel:  document.getElementById('clr-panel').value,
+    topbar: document.getElementById('clr-topbar').value,
+    ink:    document.getElementById('clr-ink').value,
+    border: document.getElementById('clr-border').value,
+    red:    document.getElementById('clr-red').value,
+    green:  document.getElementById('clr-green').value
+  };
+}
+
+function saveColors() {
+  const c = readColorInputs();
+  localStorage.setItem('sf_colors', JSON.stringify(c));
+  applyColors(c);
+  setStatus('ok', '✓ Colores guardados');
+}
+
+function resetColors() {
+  localStorage.removeItem('sf_colors');
+  document.getElementById('clr-panel').value   = DEFAULT_COLORS.panel;
+  document.getElementById('clr-topbar').value  = DEFAULT_COLORS.topbar;
+  document.getElementById('clr-ink').value     = DEFAULT_COLORS.ink;
+  document.getElementById('clr-border').value  = DEFAULT_COLORS.border;
+  document.getElementById('clr-red').value     = DEFAULT_COLORS.red;
+  document.getElementById('clr-green').value   = DEFAULT_COLORS.green;
+  applyColors(DEFAULT_COLORS);
+  setStatus('', 'Colores restablecidos');
+}
+
+// ── INIT ────────────────────────────────────────────────
+loadSettings();
+loadColors();
+updateCharCount();
+</script>
+</body>
+</html>

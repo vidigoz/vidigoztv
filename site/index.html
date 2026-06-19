@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tempoverso</title>
+<link rel="stylesheet" href="styles/main.css">
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="topnav-brand">
+    <span>Tempoverso</span>
+    El Hilado
+  </div>
+  <ul class="topnav-links">
+    <li><a href="#escritos">Escritos</a></li>
+    <li><a href="#videos">Videos</a></li>
+    <li><a href="#musica">Música</a></li>
+    <li><a href="lore.html">El Lore</a></li>
+  </ul>
+</nav>
+
+<div class="page">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-mark fade-up">El universo que se escribe mientras se vive</div>
+    <h1 class="hero-title fade-up-2">Tempoverso</h1>
+    <p class="hero-sub fade-up-3">
+      Historias, imágenes y sonidos del Hilado. Todo lo que aquí vive fue escrito,
+      o es una grieta.
+    </p>
+    <div class="hero-divider fade-up-3"></div>
+  </section>
+
+  <!-- LORE BANNER -->
+  <div style="max-width:900px;margin:0 auto;padding:0 40px 80px;">
+    <div class="lore-banner">
+      <p>"El pasado no es lo que fue. Es lo que recordamos que fue. Y lo que recordamos lo construimos en cada recuerdo."</p>
+      <span class="attribution">Principio del Tempoverso — <a href="lore.html" style="color:var(--gold);border-bottom:1px solid var(--border2);">Leer El Libro del Origen</a></span>
+    </div>
+  </div>
+
+  <!-- ESCRITOS -->
+  <section id="escritos">
+    <hr class="section-rule">
+    <div class="section-header">
+      <div class="section-header-mark">// Escritos</div>
+      <h2>El Hilado en palabras</h2>
+      <p>Mini historias, redacciones, libros. Cada texto es un hilo en el tejido.</p>
+    </div>
+    <div class="content-grid" id="escritos-grid">
+      <div class="empty-state">
+        <div class="empty-state-title">Aún no hay escritos publicados</div>
+        <p>Los primeros textos del Hilado aparecerán aquí</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- VIDEOS -->
+  <section id="videos">
+    <hr class="section-rule">
+    <div class="section-header">
+      <div class="section-header-mark">// Videos</div>
+      <h2>El Hilado en movimiento</h2>
+      <p>Historias visuales del universo Tempoverso.</p>
+    </div>
+    <div class="content-grid" id="videos-grid">
+      <div class="empty-state">
+        <div class="empty-state-title">Aún no hay videos publicados</div>
+        <p>Las primeras imágenes del Hilado aparecerán aquí</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament">· · ·</div>
+
+  <!-- MÚSICA -->
+  <section id="musica">
+    <hr class="section-rule">
+    <div class="section-header">
+      <div class="section-header-mark">// Música</div>
+      <h2>El Hilado en sonido</h2>
+      <p>El eco de la pregunta que inició todo.</p>
+    </div>
+    <div class="content-grid" id="musica-grid">
+      <div class="empty-state">
+        <div class="empty-state-title">Aún no hay música publicada</div>
+        <p>Los primeros sonidos del Hilado aparecerán aquí</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="ornament">· · ·</div>
+
+  <footer>
+    <div class="footer-brand">Tempoverso</div>
+    <div class="footer-note">Todo será contado</div>
+  </footer>
+
+</div>
+
+<script>
+  // Marca el link activo según la sección visible
+  const links = document.querySelectorAll('.topnav-links a[href^="#"]');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.topnav-links a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+
+  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
