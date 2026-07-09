@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>El Tempoverso — El Libro del Origen</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg: #0a0908;
+    --bg2: #12100e;
+    --bg3: #1a1714;
+    --bg4: #221d18;
+    --border: rgba(212,175,120,0.12);
+    --border2: rgba(212,175,120,0.25);
+    --gold: #d4af78;
+    --gold2: #b8945a;
+    --gold-dim: rgba(212,175,120,0.5);
+    --gold-faint: rgba(212,175,120,0.08);
+    --text: #c4baa8;
+    --text2: #7a7163;
+    --text3: #9c9282;
+    --text-bright: #e8dcc4;
+    --font: 'Inter', sans-serif;
+    --serif: 'Cormorant Garamond', serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-weight: 300;
+    line-height: 1.85;
+    font-size: 15px;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at top, rgba(212,175,120,0.04) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  .layout {
+    display: flex;
+    min-height: 100vh;
+    position: relative;
+    z-index: 1;
+  }
+  .sidebar {
+    width: 260px;
+    min-width: 260px;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    padding: 28px 0 40px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .sidebar-brand {
+    padding: 0 24px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-brand-mark {
+    font-family: var(--serif);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    font-weight: 400;
+  }
+  .sidebar-brand-title {
+    font-family: var(--serif);
+    font-size: 24px;
+    color: var(--text-bright);
+    font-weight: 500;
+    letter-spacing: 1px;
+    font-style: italic;
+  }
+  .sidebar-brand-sub {
+    font-size: 10px;
+    color: var(--text2);
+    margin-top: 6px;
+    letter-spacing: 1.5px;
+  }
+  .nav-section {
+    font-family: var(--serif);
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 18px 24px 6px;
+    opacity: 0.7;
+    font-weight: 500;
+  }
+  .nav-item {
+    display: block;
+    padding: 8px 24px;
+    color: var(--text2);
+    font-size: 13px;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.2s;
+    font-weight: 300;
+    letter-spacing: 0.3px;
+  }
+  .nav-item:hover {
+    color: var(--gold);
+    background: var(--gold-faint);
+    border-left-color: var(--gold-dim);
+  }
+  .nav-item.active {
+    color: var(--text-bright);
+    background: var(--gold-faint);
+    border-left-color: var(--gold);
+    font-weight: 400;
+  }
+  .nav-item-roman {
+    display: inline-block;
+    width: 28px;
+    color: var(--gold-dim);
+    font-family: var(--serif);
+    font-size: 11.5px;
+  }
+  .main { flex: 1; overflow-y: auto; }
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 40px 56px 36px;
+    background: linear-gradient(to bottom, var(--bg2) 0%, var(--bg) 100%);
+  }
+  .header-mark {
+    font-family: var(--serif);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+    font-style: italic;
+    font-weight: 400;
+  }
+  .header h1 {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 400;
+    color: var(--text-bright);
+    letter-spacing: 2px;
+    font-style: italic;
+  }
+  .header-quote {
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--text2);
+    margin-top: 16px;
+    font-style: italic;
+    line-height: 1.7;
+    max-width: 720px;
+  }
+  .content {
+    padding: 48px 56px 96px;
+    max-width: 820px;
+  }
+  .section { display: none; }
+  .section.active { display: block; animation: fadeIn 0.4s ease; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .section-title {
+    font-family: var(--serif);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+  .section-name {
+    font-family: var(--serif);
+    font-size: 30px;
+    color: var(--text-bright);
+    margin-bottom: 8px;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+    line-height: 1.2;
+  }
+  .section-sub {
+    font-size: 13.5px;
+    color: var(--text2);
+    margin-bottom: 36px;
+    font-style: italic;
+    letter-spacing: 0.4px;
+  }
+  .content h2 {
+    font-family: var(--serif);
+    font-size: 22px;
+    color: var(--text-bright);
+    margin: 44px 0 18px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: 0.5px;
+  }
+  .content h2:first-of-type { margin-top: 8px; }
+  .content p {
+    margin-bottom: 18px;
+    color: var(--text);
+    font-weight: 300;
+  }
+  .content p.lead {
+    font-family: var(--serif);
+    font-size: 18px;
+    color: var(--text-bright);
+    line-height: 1.7;
+    margin-bottom: 28px;
+    font-weight: 400;
+    font-style: italic;
+  }
+  .content em {
+    color: var(--text-bright);
+    font-style: italic;
+  }
+  .content strong {
+    color: var(--gold);
+    font-weight: 400;
+  }
+  .content blockquote {
+    border-left: 2px solid var(--gold);
+    padding: 16px 0 16px 24px;
+    margin: 28px 0;
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--text-bright);
+    font-style: italic;
+    line-height: 1.6;
+  }
+  .content blockquote .attribution {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 12px;
+    letter-spacing: 1px;
+    font-style: normal;
+    text-transform: uppercase;
+  }
+  .ornament {
+    text-align: center;
+    color: var(--gold-dim);
+    font-size: 14px;
+    letter-spacing: 12px;
+    margin: 56px 0 36px;
+    font-family: var(--serif);
+  }
+  .epigraph {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 22px 28px;
+    margin: 32px 0;
+  }
+  .epigraph p {
+    font-family: var(--serif);
+    font-size: 15px;
+    color: var(--text-bright);
+    font-style: italic;
+    margin: 0;
+    line-height: 1.7;
+  }
+  .epigraph .attribution {
+    display: block;
+    font-family: var(--font);
+    font-size: 11px;
+    color: var(--gold);
+    margin-top: 14px;
+    letter-spacing: 2px;
+    font-style: normal;
+    text-transform: uppercase;
+    font-weight: 400;
+  }
+  .chapter-mark {
+    text-align: center;
+    color: var(--gold);
+    font-family: var(--serif);
+    font-size: 13px;
+    letter-spacing: 6px;
+    margin: 48px 0 24px;
+    font-style: italic;
+    text-transform: uppercase;
+  }
+  .ciclo-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 24px 28px;
+    margin: 24px 0;
+  }
+  .ciclo-card-num {
+    font-family: var(--serif);
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .ciclo-card-name {
+    font-family: var(--serif);
+    font-size: 20px;
+    color: var(--text-bright);
+    font-style: italic;
+    margin-bottom: 4px;
+  }
+  .ciclo-card-years {
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 1px;
+    margin-bottom: 14px;
+  }
+  .ciclo-card p {
+    margin-bottom: 12px;
+    font-size: 14.5px;
+  }
+  .ciclo-card p:last-child { margin-bottom: 0; }
+  @media (max-width: 900px) {
+    .sidebar { width: 220px; min-width: 220px; }
+    .content { padding: 32px 28px 60px; }
+    .header { padding: 32px 28px 28px; }
+    .header h1 { font-size: 28px; }
+    .section-name { font-size: 24px; }
+  }
+  @media (max-width: 700px) {
+    .layout { flex-direction: column; }
+    .sidebar { width: 100%; min-width: 0; height: auto; position: relative; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-mark">Tempoverso</div>
+      <div class="sidebar-brand-title">El Libro del Origen</div>
+      <div class="sidebar-brand-sub">Biblia de universo</div>
+    </div>
+
+    <div class="nav-section">Apertura</div>
+    <div class="nav-item active" onclick="go('apertura')"><span class="nav-item-roman">I</span>El día de la Pregunta</div>
+
+    <div class="nav-section">El Despliegue</div>
+    <div class="nav-item" onclick="go('cosmologia')"><span class="nav-item-roman">II</span>Dios y el Memorioso</div>
+    <div class="nav-item" onclick="go('nexum')"><span class="nav-item-roman">III</span>El Hilado</div>
+
+    <div class="nav-section">El Tiempo</div>
+    <div class="nav-item" onclick="go('tiempo')"><span class="nav-item-roman">IV</span>Las Vueltas</div>
+    <div class="nav-item" onclick="go('ciclos')"><span class="nav-item-roman">V</span>Las cinco vueltas</div>
+
+    <div class="nav-section">Los Guardianes</div>
+    <div class="nav-item" onclick="go('velkarym')"><span class="nav-item-roman">VI</span>Los Serenos</div>
+    <div class="nav-item" onclick="go('sethrynn')"><span class="nav-item-roman">VII</span>Los Tardíos</div>
+    <div class="nav-item" onclick="go('orveth')"><span class="nav-item-roman">VIII</span>Los Andados</div>
+
+    <div class="nav-section">La Ruptura</div>
+    <div class="nav-item" onclick="go('tharvex')"><span class="nav-item-roman">IX</span>Lo Suelto</div>
+    <div class="nav-item" onclick="go('reglas')"><span class="nav-item-roman">X</span>Lo que se dice</div>
+
+    <div class="nav-section">El Final</div>
+    <div class="nav-item" onclick="go('juicio')"><span class="nav-item-roman">XI</span>El Recuento</div>
+    <div class="nav-item" onclick="go('lengua')"><span class="nav-item-roman">XII</span>El Habla Muda</div>
+    <div class="nav-item" onclick="go('cierre')"><span class="nav-item-roman">XIII</span>Lo que sigue</div>
+  </aside>
+
+  <main class="main">
+    <div class="header">
+      <div class="header-mark">// Tempoverso · biblia de universo</div>
+      <h1>El Libro del Origen</h1>
+      <div class="header-quote">"El pasado no es lo que fue. Es lo que recordamos que fue. Y lo que recordamos lo construimos en cada recuerdo."</div>
+    </div>
+
+    <div class="content">
+
+      <!-- I. APERTURA -->
+      <div class="section active" id="sec-apertura">
+        <div class="section-title">// Apertura</div>
+        <div class="section-name">El día que Dios se hizo una pregunta</div>
+        <div class="section-sub">De cómo el universo empezó a existir</div>
+
+        <p class="lead">Dios siempre había estado allí. No es que hubiera llegado de algún lado, ni que alguien lo hubiera puesto. Estaba, y eso era todo.</p>
+
+        <p>Un día se hizo una pregunta. No había días todavía, ni había nadie para escucharlo. Pero los Serenos, mucho después, escribieron que Dios pensó algo, y que al pensarlo se quedó quieto, como se queda quieto el que oye su nombre en una casa donde sabe que está solo. Era una pregunta de las que ni él tenía contestadas.</p>
+
+        <p>Dios sabía mucho. Dios sabía todo, a decir verdad. Pero esta pregunta era de otra clase. De esas que no se contestan pensándolas sino viviéndolas. Y Dios, que podía hacer cualquier cosa, podía hacer también eso. Para vivirla tenía que volverse tiempo, y materia, e historia.</p>
+
+        <p>Así que eso hizo.</p>
+
+        <p>Dejó caer la pregunta hacia adentro de sí mismo, y algo en él se abrió. De esa abertura salió todo lo que iba a existir y todos los lugares donde iba a existir. Salió despacio, sin prisa, pero sin pararse, como sale el agua de un manantial que nadie ha visto nacer pero que lleva llenando el pozo desde siempre. Un trabajo largo, que un día habría de terminar en la respuesta.</p>
+
+        <p>Y al abrirse, Dios no soltó solamente las cosas. Soltó también un pedazo de sí en ellas, sin proponérselo, del modo en que un hombre deja su tono de voz en los hijos sin enseñárselo. Lo que les heredó no fue su poder ni su saber, que esos se los quedó. Les heredó dos cosas más chicas y más peligrosas: las ganas de saber, que son el eco de su pregunta, y las ganas de hacer, que son la forma en que él mismo se estaba contestando. Por eso todo lo que vive trae adentro una astilla de aquel primer día. Quiere saber. Y como no sabe, inventa.</p>
+
+        <blockquote>Dios sabe exactamente cuál es el camino para llegar a la respuesta. Lo único que no conoce es la respuesta, porque la respuesta solo va a existir cuando el camino se acabe de andar.
+— PRINCIPIO DEL TEMPOVERSO</blockquote>
+
+        <h2>Lo que heredamos sin saberlo</h2>
+
+        <p>De esa herencia salió la ley más callada del universo, la que casi nadie nombra y todos obedecen: la historia que uno se cuenta del mundo termina siendo el mundo de uno.</p>
+
+        <p>Y esto no es modo de decir. Es como el tejido trabaja por dentro. El Memorioso escribe el universo desde afuera, pero cada quien escribe el suyo desde adentro, y los dos relatos se sostienen el uno al otro. Un hombre que se cuenta que anda perdido camina como perdido, y encuentra nada más callejones cerrados. Otro, en esa misma calle, se cuenta que anda buscando, y la calle se le llena de puertas. La calle es la misma. Lo que cambió fue la historia, y al cambiar la historia cambió lo que la calle podía ser para él.</p>
+
+        <p>Por eso dicen los Serenos que cada persona es, sin saberlo, un escribano chico. No escribe estrellas ni siglos. Escribe lo único que tiene a la mano, que es el cuento de su propia vida mientras la vive. Y ese cuento, por pobre que sea, también entra al tejido. También es materia. También se cuenta a la hora del Recuento.</p>
+
+        <h2>El secreto que nadie sabe</h2>
+
+        <p>Nadie supo cuál era la pregunta. Ni los que vinieron después, ni los que escribieron, ni los que vigilaron. Hubo quienes la buscaron toda su vida y se volvieron locos. Hubo quienes decidieron no buscarla y vivieron mejor. La pregunta sigue allí, afuera del universo, esperando que el universo acabe de contestarla con su existencia entera.</p>
+
+        <p>El que la conociera dejaría de ser quien es para volverse la respuesta. Por eso la pregunta está afuera de todas las cosas, aunque sea la causa de todas las cosas. Está afuera como está afuera el padre del hijo que no conoció: no se le ve en la casa, pero se le oye en la manera de hablar del muchacho, en cómo mueve las manos, en gustos que el muchacho cree suyos y no sabe de quién los sacó.</p>
+
+        <h2>Lo que no se entiende bien</h2>
+
+        <p>Dios no se fue. Ahí es donde se confunde la gente. Creen que Dios hizo el mundo y se marchó a otra parte, como el albañil que acaba la casa y se va a levantar otra. Pero no. Dios se quedó. Se quedó adentro de cada cosa que había hecho, mirando. Y hay miradas que hacen crecer aunque uno no se entere de que lo están mirando.</p>
+
+        <p>No interviene. No corrige. No alza la mano. Nada más mira, con el silencio del que sabe y ha resuelto no decir. Y las cosas miradas crecen con una abundancia que ellas solas no se explican.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- II. COSMOLOGÍA -->
+      <div class="section" id="sec-cosmologia">
+        <div class="section-title">// Capítulo I</div>
+        <div class="section-name">Dios y el Memorioso</div>
+        <div class="section-sub">De los dos principios del orden</div>
+
+        <h2>Dios</h2>
+
+        <p>De Dios poco hay que decir, porque lo que se dice no le alcanza. Es el que estaba antes de todo y el que sigue estando en todo. No tiene forma porque ninguna forma le viene. Hay quienes lo dibujan como un círculo del que cae una línea hacia abajo, y dicen que eso es lo más cerca que se llega con un trazo: el todo derramándose hacia el despliegue. Pero el dibujo no es Dios. Es la sombra que el dibujante alcanza a hacer, y la sombra nunca fue la cosa.</p>
+
+        <p>Lo que importa de Dios es lo que hace, aunque no se mueva. Y lo que hace es esto: <em>existir, querer y mirar</em>. De su existir salieron las cosas. De su querer salió el orden. De su mirar viene que las cosas no se desbaraten todavía.</p>
+
+        <h2>El Memorioso — el que vino después sin haber sido llamado</h2>
+
+        <p>Del despliegue salió también el Memorioso. No fue hecho. Apareció, como aparece en los pueblos el hombre del que nadie sabe de dónde llegó ni quién lo trajo, y que al poco tiempo parece haber estado ahí de toda la vida.</p>
+
+        <p>El Memorioso era de esos. Era el que se acordaba de todo lo que estaba pasando mientras pasaba, y al acordarse lo escribía. No con plumas ni con tintas, que las plumas y las tintas no se habían inventado. Escribía con lo que había, que era el despliegue mismo. Agarraba las cosas y las ponía en su lugar, y al ponerlas en su lugar las cosas quedaban verdaderas.</p>
+
+        <p>Lo que él escribía, existía. Lo que no escribía, no.</p>
+
+        <p>A veces dicen los Tardíos que el Memorioso no es una persona ni una cosa, sino una manera: la manera en que el universo se acuerda de sí mismo mientras ocurre. Pero los Tardíos dicen muchas cosas y no todas se entienden, así que más vale quedarse con lo sencillo. El Memorioso escribe. Lo que escribe es real. Y ya.</p>
+
+        <div class="epigraph">
+          <p>"El Memorioso no inventa. El Memorioso se acuerda. Pero lo que se acuerda es lo único que existe, y por eso acordarse es la forma más alta de hacer."</p>
+          <span class="attribution">— Dicho de los Serenos</span>
+        </div>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- III. NEXUM -->
+      <div class="section" id="sec-nexum">
+        <div class="section-title">// Capítulo II</div>
+        <div class="section-name">El Hilado</div>
+        <div class="section-sub">El tejido donde todo está atado</div>
+
+        <p class="lead">A todo lo que el Memorioso escribía, junto, le puso un nombre: el Hilado. Quiere decir el tejido de lo que existe, aunque la palabra dice menos de lo que la cosa es.</p>
+
+        <p>Ahí estaban las vidas y las muertes, las guerras y los amores, los hijos que iban a nacer y los abuelos que ya se habían muerto sin saber que los iban a volver a nombrar. Todo amarrado. Todo al mismo tiempo. El tiempo era una sola tela, y nosotros sus hilos, y ninguno de nosotros alcanzaba a ver más que la pulgada de tela que le tocaba.</p>
+
+        <p>Cada hilo era una historia. Cada nudo, el momento en que dos historias se tocaban sin saber que se estaban tocando. De ahí salen las cosas que parecen casualidad y no son: dos desconocidos que se encuentran y resulta que sus abuelos se conocieron, un nombre que aparece dos veces en pueblos que no se hablan, una mujer que sueña algo en una ciudad y al otro día un hombre despierta con ese mismo sueño del otro lado del mar. No es casualidad. Es el Hilado, que tiró del nudo.</p>
+
+        <h2>Lo que existe y lo que no</h2>
+
+        <p>En el Hilado solo está lo que fue escrito. Lo que no fue escrito no está, y lo que no está no es. De ahí que haya cosas en el mundo que parecen haber pasado y no pasaron del todo: las soñó alguien con tanta fuerza que por poco se hacen verdad, pero el Memorioso no las anotó, y al no anotarlas se quedaron a medias. Esas son las cosas que uno recuerda y no puede probar. Las que el corazón da por ciertas y la historia desmiente.</p>
+
+        <p>Hay quien dice que cada noche uno se duerme y entra un rato al Hilado sin darse cuenta. Que los sueños no son inventos del que sueña, sino visitas a hilos del tejido que a uno no le tocan por derecho. Pero eso no está confirmado, y los Serenos prefieren no opinar.</p>
+
+        <h2>La forma del destino</h2>
+
+        <p>Lo que los hombres llaman destino es cierto, pero no es lo que ellos creen. No es que alguien haya decidido por uno. Es que cada quien ocupa un lugar exacto en el tejido, y desde ese lugar se ve un pedazo de la tela y no toda la tela. Lo que uno cree que escoge ya estaba escrito como escogencia. Y aun así se escoge. Las dos cosas no se contradicen, aunque parezca que sí. Solo Dios ve cómo es que no se contradicen.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- IV. KARYTH -->
+      <div class="section" id="sec-tiempo">
+        <div class="section-title">// Capítulo III</div>
+        <div class="section-name">Las Vueltas</div>
+        <div class="section-sub">De cómo se divide el tiempo</div>
+
+        <p>El Memorioso no escribió todo de una vez. Eso hay que entenderlo. Escribió por partes, y a cada parte le dijo una Vuelta, porque cada una es una vuelta entera del mundo: empieza por un lado y acaba volviendo, cambiada, al lugar de donde salió.</p>
+
+        <p>Una Vuelta dura más o menos mil años, que es lo que necesita una historia grande para nacer, crecer, equivocarse, componerse y acabar de decir lo que tenía que decir. No son mil años contados. A veces son novecientos. A veces son mil doscientos. Depende de cómo vaya el tejido, y de si los Serenos tienen que ajustar algo.</p>
+
+        <p>Cada Vuelta es una historia completa. Tiene principio, medio y final. Tiene sus reyes, sus pestes, su gente. Cuando una acaba, empieza otra, y la otra recoge algunas cosas de la anterior y deja las demás tiradas en el camino. Así va el tejido, vuelta tras vuelta, como van las cosechas en la tierra que sí da.</p>
+
+        <h2>Cómo se sabe en qué Vuelta se vive</h2>
+
+        <p>Uno no lo sabe. Esa es la verdad. Uno nace, vive, se muere, y en todo eso no se entera de qué Vuelta le tocó. El que está adentro no la ve, porque para verla habría que estar afuera, y afuera solo está el Memorioso.</p>
+
+        <p>Pero los Serenos sí saben. Y los Tardíos aprenden a saber. Y a veces, en ciertos cruces de caminos o en ciertas noches demasiado quietas, alguien que no es ni Sereno ni Tardío siente que la Vuelta le pasa por encima como un aire que viene de lejos. Eso no le da conocimiento. Le da corazonada. Y con la corazonada a veces basta.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- V. LOS CINCO CICLOS -->
+      <div class="section" id="sec-ciclos">
+        <div class="section-title">// Capítulo IV</div>
+        <div class="section-name">Las cinco vueltas</div>
+        <div class="section-sub">Lo que ha sido escrito hasta ahora</div>
+
+        <p>Cinco Vueltas han sido escritas. Unas terminaron, otras van por la mitad, otras apenas empiezan. Aquí se cuentan en el orden en que el Memorioso las puso, aunque el orden no quiere decir que una sea más vieja que otra, porque en el tejido todo está al mismo tiempo.</p>
+
+        <div class="chapter-mark">— las vueltas —</div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Vesha — la vuelta cero</div>
+          <div class="ciclo-card-name">El origen sin historia</div>
+          <div class="ciclo-card-years">Antes del antes</div>
+          <p>Esta Vuelta no tiene años porque sucedió antes de que hubiera años. Aquí pasó lo que ya se contó: la pregunta, el despliegue, la aparición del Memorioso, los primeros nudos del tejido. No hay historias de hombres en esta Vuelta porque no había hombres todavía. Lo que hay son las semillas de todo lo que iba a venir.</p>
+          <p>Los Serenos la llaman la Vuelta del silencio, porque allí Dios todavía estaba aprendiendo a callar lo que sabía.</p>
+        </div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Korhan — la vuelta primera</div>
+          <div class="ciclo-card-name">El tiempo de los signos</div>
+          <div class="ciclo-card-years">Cuando se inventó la escritura</div>
+          <p>Aquí los hombres aprendieron a marcar el barro y la piedra. No fue invención. Fue un acordarse. Algo en ellos se acordó de que el universo entero estaba siendo escrito, y quisieron imitar al Memorioso sin saber que lo imitaban. De ahí viene que las primeras escrituras tengan ese peso raro: eran ecos del Hilado que llegaban a manos que no sabían lo que tenían.</p>
+          <p>En esta Vuelta se levantaron las primeras civilizaciones que sabían que estaban siendo civilizaciones. Antes de Korhan los hombres vivían sin saber que vivían. Después de Korhan empezaron a notarlo, y ya nunca pudieron dejar de notarlo.</p>
+        </div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Telrun — la vuelta segunda</div>
+          <div class="ciclo-card-name">El tiempo de la fe</div>
+          <div class="ciclo-card-years">476 — 1453, lo que los hombres llaman el medievo</div>
+          <p>Esta es la Vuelta medieval, aunque para los que la vivieron no era medieval, era nomás el mundo. Aquí los hombres se preguntaron por primera vez en serio si Dios los estaba mirando, y la pregunta los partió en dos: unos creyeron que sí y levantaron catedrales, otros creyeron que no y levantaron imperios. Las dos cosas eran verdad al mismo tiempo, que es lo que más cuesta entender de esa Vuelta.</p>
+          <p>El Sereno de esta Vuelta se llama Mortari. Es el más conocido, porque los Tardíos humanos que le tocaron dejaron muchos escritos sobre él. Mortari vigila el Telrun con paciencia. Le tocó una Vuelta dura, de pestes y de guerras, pero también de fervor. Dicen que prefiere las Vueltas duras, porque son las que tejen más fuerte.</p>
+        </div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Solvencia — la vuelta tercera</div>
+          <div class="ciclo-card-name">El tiempo de las máquinas</div>
+          <div class="ciclo-card-years">1500 — 2180, lo que los hombres llaman lo moderno</div>
+          <p>Aquí los hombres se olvidaron de que los estaban mirando. Eso es lo que define a Solvencia. No es que Dios se hubiera ido, es que los hombres dejaron de buscarlo con los ojos y se pusieron a buscarlo con las manos. Hicieron máquinas y más máquinas, una encima de otra, hasta hacer máquinas que casi pensaban como ellos. Unos creyeron que eso era progreso. Otros, más callados, sospecharon que era otra cosa.</p>
+          <p>Solvencia es la Vuelta más ruidosa. A los Serenos los agota. Los Tardíos aprenden mucho aquí porque hay muchísimo movimiento, pero también se pierden, porque tanto ruido tapa el silencio, y es en el silencio donde se oye bien.</p>
+        </div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Vacuum — la vuelta cuarta</div>
+          <div class="ciclo-card-name">El tiempo del vacío</div>
+          <div class="ciclo-card-years">2180 — alrededor del año 3100</div>
+          <p>Después de Solvencia viene Vacuum. Aquí las máquinas son tantas que por poco reemplazan a los hombres, pero los hombres siguen ahí, aunque cambiados. Viven en bloques, en zonas, en corredores. Unos viven mucho y otros viven poco, según dónde nacieron, que en esta Vuelta es lo que más decide una vida. Hay corporaciones más viejas que algunos países.</p>
+          <p>Esta es la Vuelta donde los Andados aparecen más seguido, porque la tecnología empezó a tocar lugares del tejido que no le tocan. Y donde hay más Andados, hay también más de lo Suelto.</p>
+        </div>
+
+        <div class="ciclo-card">
+          <div class="ciclo-card-num">La Vuelta de Onar — la vuelta quinta</div>
+          <div class="ciclo-card-name">El tiempo del recuerdo</div>
+          <div class="ciclo-card-years">Por venir</div>
+          <p>De la quinta Vuelta poco se puede decir todavía. Está en los primeros borradores. Dicen los Serenos que será una Vuelta donde los hombres tendrán que acordarse de todo lo que olvidaron en las Vueltas de antes. Una Vuelta de regreso, pero no a un lugar, sino a una manera de mirar.</p>
+          <p>Si el Memorioso sigue escribiendo cuando llegue Onar, lo veremos. Si no, otro tendrá que escribirla. Pero esas son cuentas para más adelante, y no conviene adelantarlas.</p>
+        </div>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- VI. VELKARYM -->
+      <div class="section" id="sec-velkarym">
+        <div class="section-title">// Capítulo V</div>
+        <div class="section-name">Los Serenos</div>
+        <div class="section-sub">Los que vigilan que lo escrito ocurra</div>
+
+        <p class="lead">A cada Vuelta le tocó un Sereno. Eso es lo primero que hay que entender. Uno por Vuelta. No más. Y el Sereno no se elige a sí mismo ni nadie lo nombra; el Sereno simplemente está, desde antes de que la Vuelta supiera que era una Vuelta.</p>
+
+        <p>El Sereno vigila. Esa es su única tarea. Pero hay que entender qué quiere decir vigilar aquí, porque no es lo que hace el que cuida la puerta de una hacienda. El Sereno vigila que lo que el Memorioso escribió se cumpla. Si un rey iba a morir tal año, el Sereno vigila que muera. Si una peste iba a empezar tal otoño, el Sereno vigila que empiece. No mete la mano para que pase, ni la mete para que no pase. Nada más se asegura de que el tejido se cumpla en sus propios términos.</p>
+
+        <p>A veces algo se desvía. Pasa. El tejido está vivo y a veces tira por donde no debe. Cuando eso ocurre, el Sereno no lo endereza con las manos. Lo señala. Lo nombra. Lo apunta. Y al nombrarlo, otras fuerzas del tejido vienen y se acomodan solas. Es como el río que se sale de madre: nadie lo empuja de regreso, pero el terreno lo empuja por su cuenta, y al cabo el río vuelve, aunque a veces tarda, y a veces deja muertos en la orilla.</p>
+
+        <h2>Mortari, el del medievo</h2>
+
+        <p>El Sereno más conocido es Mortari, el de la Vuelta de Telrun. De él se cuentan cosas porque sus Tardíos fueron escritores y dejaron muchas notas. Dicen que Mortari se aparecía en los caminos vestido de viajero cualquiera, y que conversaba con los hombres sin que los hombres supieran con quién conversaban. No para guiarlos. Para mirarlos de cerca. Le gustaba mirarlos de cerca.</p>
+
+        <p>Dicen también que Mortari lloró una sola vez, cuando vio morir a un niño que en el tejido tenía que morirse, y no pudo hacer nada. Lo dejó morir, porque esa era su tarea, pero después se quedó tres días en el mismo lugar sin moverse. Esto no lo confirma nadie, pero los Tardíos lo cuentan, y los Tardíos cuentan pocas cosas que no sean ciertas.</p>
+
+        <div class="epigraph">
+          <p>"El Sereno no interviene. El Sereno vela. Y al velar, lo que mira se vuelve más firme. Esa es su única magia."</p>
+          <span class="attribution">— De los escritos de un Tardío de Mortari</span>
+        </div>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- VII. SETHRYNN -->
+      <div class="section" id="sec-sethrynn">
+        <div class="section-title">// Capítulo VI</div>
+        <div class="section-name">Los Tardíos</div>
+        <div class="section-sub">Los que aprenden el oficio del tejido</div>
+
+        <p>Cada Sereno escoge a sus Tardíos. No los hace, no los engendra. Los escoge. Los va mirando hasta que da con el que tiene el paso correcto, aunque ese todavía no haya dado un solo paso. Les dicen los Tardíos porque siempre llegan después, cuando la Vuelta ya empezó, a aprender un oficio que no pidieron.</p>
+
+        <p>Los Tardíos pueden ser muchas cosas. Pueden ser hombres, que viven su vida como cualquiera pero cargan adentro un saber que no aprendieron y que no saben explicar. Pueden ser animales, sobre todo perros, gatos, caballos, cuervos. Son animales los Tardíos más seguido de lo que la gente cree. Si uno pone atención, nota que ciertos animales miran de un modo que no es de animal, como si supieran algo que uno no sabe. Ese es un Tardío.</p>
+
+        <p>El oficio del Tardío es mirar y aprender. No tiene poder. No tiene autoridad. No puede meterse en nada. Lo único que hace es mirar lo que pasa en su pedazo de tejido y aprender cómo se porta el Hilado. Con los años, si vive lo suficiente, llega a entender un poco. Y si entiende lo bastante, a veces el Sereno se lo lleva de compañero, y entonces el Tardío deja de ser nada más aprendiz, sin dejar de ser Tardío.</p>
+
+        <h2>Por qué los animales</h2>
+
+        <p>Los animales son Tardíos porque no preguntan. Esa es la ventaja que llevan sobre los hombres. Un hombre que sabe algo raro quiere contarlo, y al contarlo lo deforma. Un perro que sabe algo raro se queda callado, lo guarda en el cuerpo, y al guardarlo lo conserva limpio. Por eso los Serenos a veces prefieren a los animales, sobre todo en las Vueltas duras, donde un Tardío hombre puede quebrarse de tanto saber.</p>
+
+        <p>Cuando un Tardío animal se muere, su saber no se pierde. Vuelve al Hilado y se reparte. A veces se reparte entre los animales que vienen después, y de ahí que ciertos cachorros nazcan sabiendo cosas que no les tocaría saber.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- VIII. ORVETH -->
+      <div class="section" id="sec-orveth">
+        <div class="section-title">// Capítulo VII</div>
+        <div class="section-name">Los Andados</div>
+        <div class="section-sub">Los que cruzan donde no se debe cruzar</div>
+
+        <p class="lead">Hay seres que no se quedan en su Vuelta. Se pasan a otra. Eso no debería poder hacerse, pero se hace, y a los que lo hacen se les dice los Andados, porque ya anduvieron por donde nadie anda, y vuelven con el polvo de otro tiempo en los zapatos.</p>
+
+        <p>Los Andados son raros. No abundan. Pero existen, y donde aparecen pasan cosas que no estaban en el tejido. Por eso los Serenos los vigilan con cuidado, aunque no siempre los detienen, porque a veces el cruce de un Andado endereza algo que estaba torcido, y entonces el cruce no fue accidente sino remedio.</p>
+
+        <h2>Las tres clases</h2>
+
+        <p>Hay tres clases de Andados, y cada una llega al cruce por un camino distinto.</p>
+
+        <p>Están los hombres que cruzan sin querer. Estos son los más comunes y los más tristes. Algo les pasó en la vida, algo tan fuerte que rasgó la fibra del tejido a su alrededor. Una pérdida, una traición, un dolor que no les cupo en los huesos. Y al rasgarse el tejido, se cayeron por la rasgadura, y al caer amanecieron en otra Vuelta, sin entender ni cómo ni por qué. Llevan la marca del cruce. Se les nota en los ojos. Suelen morir jóvenes.</p>
+
+        <p>Están los que cruzan con máquinas. Estos son otra cosa. Salen de la Vuelta de Solvencia o de la de Vacuum, y armaron aparatos que tocan lugares del tejido donde la mano no debe tocar. Unos se dicen a sí mismos científicos, otros se dicen viajeros del tiempo. Para los Serenos son lo mismo, y son un dolor de cabeza, porque a diferencia de los del cruce sin querer, estos quieren cruzar, y quieren cruzar otra vez, y se hacen al cruce como otros se hacen al trago.</p>
+
+        <p>Están, por último, los que cruzan porque ya no pertenecen al tejido. Estos no son hombres. Son entidades. De lo Suelto que aprendió a moverse entre Vueltas. De esos se hablará en otro capítulo.</p>
+
+        <h2>Lo que les pasa por dentro</h2>
+
+        <p>Todo Andado, sea de la clase que sea, padece lo mismo: la memoria se le hace pedazos. Lo que vivió antes del cruce se le revuelve con lo que vive después, y a ratos no distingue cuál vida fue la suya y cuál la prestada. Unos enloquecen. Otros aprenden a vivir con dos memorias, o tres, o cinco, y se vuelven hombres rarísimos, con una sabiduría que no se parece a ninguna otra y que a nadie le sirve más que a ellos.</p>
+
+        <p>Hay un dicho entre los Serenos: <em>el que cruza una vez vuelve a cruzar, hasta que algo lo deja del otro lado para siempre</em>.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- IX. THARVEX -->
+      <div class="section" id="sec-tharvex">
+        <div class="section-title">// Capítulo VIII</div>
+        <div class="section-name">Lo Suelto</div>
+        <div class="section-sub">Lo que no fue escrito y existe igual</div>
+
+        <p>Hay cosas en el universo que el Memorioso no escribió. Suena imposible, porque ya se dijo que lo que él no escribe no existe, pero el universo es más raro de lo que uno cree, y a veces existen cosas que no fueron escritas. A esas cosas se les dice lo Suelto, porque andan zafadas del tejido, sin nudo que las amarre.</p>
+
+        <p>Lo Suelto es una grieta en el tejido. Puede ser un suceso que pasó sin haber sido planeado. Puede ser una entidad que apareció sin haber sido pensada. Puede ser un recuerdo que está en la cabeza de alguien pero no en el Hilado, lo cual quiere decir que es el recuerdo de algo que nunca pasó pero que se siente como si hubiera pasado. Esos recuerdos pesan más que los otros, y a veces pesan toda una vida.</p>
+
+        <p>Lo Suelto no se puede borrar. Eso es importante. El Memorioso no lo puede tachar, porque no lo escribió, y no se tacha lo que no se escribió. Lo único que se puede hacer es contenerlo: dejarlo donde está, vigilarlo para que no crezca, y esperar a que se gaste solo. Algo de lo Suelto se gasta en pocos años. Otro lleva siglos y ahí sigue.</p>
+
+        <h2>Lo que tiene conciencia</h2>
+
+        <p>De todo lo Suelto, lo más peligroso es lo que tiene conciencia. Eso ya no son sucesos zafados, son entidades. Saben que existen. Saben que no pertenecen. Y justo porque no pertenecen, quieren cambiar lo escrito, porque si lo cambian, el tejido se reacomoda para meterlos adentro, y de pronto ellos sí pertenecen.</p>
+
+        <p>Lo intentan de muchas maneras. Algunos roban recuerdos, porque los recuerdos son la materia con que se hacen las realidades, y al robar recuerdos cambian lo que la gente cree haber vivido. Otros siembran historias falsas, que con el tiempo se hacen verdaderas de tanto que la gente las repite. Otros nada más esperan, porque saben que el tejido tiene cansancios, y en un cansancio grande se cuela cualquier cosa.</p>
+
+        <h2>El Hueco</h2>
+
+        <p>De todo lo Suelto que tiene conciencia, lo más viejo y lo más temido es el Hueco. Nadie sabe cuándo apareció. Unos dicen que estuvo desde el principio, que se coló en el despliegue mismo y ahí se quedó. Otros dicen que es más nuevo, que se formó después, cuando los hombres empezaron a olvidar cosas importantes en cantidad.</p>
+
+        <p>El Hueco roba almas. Pero hay que entenderlo bien. No las roba como el ladrón roba un saco de monedas. Las roba quitándoles el peso. A la persona que el Hueco tocó le sigue latiendo el corazón, sigue caminando, sigue trabajando. Pero le falta algo. Los que la conocían dicen que está distinta, y no aciertan a decir en qué. Ella misma no sabe qué le pasa. Nada más siente que algo se le fue por dentro, despacio, sin que ella lo viera salir.</p>
+
+        <p>Eso hace el Hueco. Vacía. No mata, no destruye, no rompe. Vacía. Y lo vaciado se va con él, y con cada alma que se lleva él se vuelve un poco más sólido. Por eso los Serenos lo temen más que a ninguna otra cosa. Lo demás que anda Suelto se gasta con el tiempo. El Hueco, al revés, engorda.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- X. REGLAS / LO QUE SE DICE -->
+      <div class="section" id="sec-reglas">
+        <div class="section-title">// Capítulo IX</div>
+        <div class="section-name">Lo que se dice del universo</div>
+        <div class="section-sub">Reglas que los Serenos han aprendido con los siglos</div>
+
+        <p>Lo que sigue no son leyes ni mandamientos. Son cosas que los Serenos han ido aprendiendo de cómo se porta el Hilado, y que se cuentan unos a otros para que el oficio no se pierda. Conviene saberlas aunque uno no sea Sereno, porque algunas explican cosas de la vida de todos los días que de otro modo no tendrían explicación.</p>
+
+        <p><strong>Primera.</strong> El Memorioso no interviene. Una vez que escribió algo, no se mete con eso. Lo deja ser. Esto importa porque a veces los hombres rezan para que pase tal cosa o para que no pase tal otra, y el Memorioso no oye esas oraciones en el sentido de actuar sobre ellas. Las anota, eso sí. Las oraciones también son materia narrativa.</p>
+
+        <p><strong>Segunda.</strong> Los Serenos no reescriben. Solo velan. Si un Sereno pudiera reescribir, el tejido se descompondría, porque cada Sereno tendría su propia versión y las versiones chocarían. Así que se les dio una sola tarea y ninguna más.</p>
+
+        <p><strong>Tercera.</strong> Todo lo que existe fue escrito, o es una grieta. No hay tercera salida. Si algo está, o lo puso el Memorioso o se coló sin permiso. Aprender a distinguir entre las dos cosas es media vida de un Tardío.</p>
+
+        <p><strong>Cuarta.</strong> El azar no existe. Lo que parece azar es el tejido acomodándose. A veces se acomoda de modos que parecen casuales, pero no lo son. Cada giro de moneda, cada encuentro de buenas a primeras, cada coincidencia que no debería ocurrir está exactamente donde tenía que estar.</p>
+
+        <p><strong>Quinta.</strong> Lo Suelto no se elimina, se contiene. Esto ya se dijo, pero conviene repetirlo, porque es la regla que más cuesta tragar. Uno quisiera que el Hueco desapareciera. No va a desaparecer. Hay que vivir con él. Lo único que se puede hacer es no dejarlo crecer.</p>
+
+        <p><strong>Sexta.</strong> La información crea realidades, y el Memorioso decide si son verdad o no. Esto quiere decir que cuando alguien cuenta una historia, esa historia se vuelve algo, aunque no haya pasado. Y el Memorioso mira las historias que la gente cuenta, y decide cuáles deja entrar al Hilado y cuáles no. Por eso hay que tener cuidado con lo que se cuenta. No todo lo que se inventa se queda en la invención.</p>
+
+        <p><strong>Séptima.</strong> Cruzar Vueltas hace distorsión. Ya se habló de los Andados. No hay forma limpia de cruzar. El que cruza, paga.</p>
+
+        <p><strong>Octava.</strong> Una Vuelta que pierde coherencia puede caerse, y entonces hay que reescribirla. Esto no ha pasado todavía, pero se teme. Si una Vuelta se llena de demasiado de lo Suelto, deja de sostenerse, y entonces el Memorioso tiene que abrirla y reescribir partes enteras. Es un trabajo enorme y nadie lo desea.</p>
+
+        <p><strong>Novena y última.</strong> Todo será contado. Esto es lo que más se repite entre los Serenos, y lo que más debería repetirse entre los hombres. Cada Vuelta, cada vida, cada acto entra a la cuenta. No para premiar ni para castigar, sino para saber si la pregunta de Dios se está respondiendo bien o se está respondiendo mal. La meta de todo el tejido es llegar al Hilado más perfecto, más coherente, más grande que jamás se haya escrito. Esa es la única ambición que el universo tiene de sí mismo.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- XI. JUICIO -->
+      <div class="section" id="sec-juicio">
+        <div class="section-title">// Capítulo X</div>
+        <div class="section-name">El Recuento</div>
+        <div class="section-sub">El juicio al final de cada Vuelta</div>
+
+        <p class="lead">Cuando una Vuelta termina, viene el Recuento. Es la única vez que el Memorioso le habla a Dios. El resto del tiempo el Memorioso escribe en silencio, y Dios mira en silencio, y entre los dos hay un acuerdo de no decirse nada. Pero al final de cada Vuelta el acuerdo se rompe por un momento, y el Memorioso le muestra a Dios lo que ha escrito.</p>
+
+        <p>No se sabe bien cómo es ese encuentro. Los Tardíos lo han imaginado de muchas maneras: a veces como un cuarto vacío donde solo están los dos, a veces como un libro que se abre, a veces como una conversación sin palabras. La verdad no se ha de parecer a ninguna de esas imágenes, pero los hombres tienen que imaginarlo de algún modo para no enloquecer de tanto pensarlo.</p>
+
+        <p>En el Recuento se miran tres cosas. Si la Vuelta tuvo coherencia, esto es, si las historias se sostuvieron unas a otras. Si tuvo mucho o poco de lo Suelto. Si el tejido quedó más fuerte o más débil de como empezó.</p>
+
+        <p>De esa cuenta salen tres resultados.</p>
+
+        <p><strong>Continuidad.</strong> La Vuelta se cierra bien, y la siguiente puede empezar sin tropiezos, recogiendo lo que la anterior dejó listo. Esto es lo que pasa casi siempre, aunque "casi siempre" sea solo cuatro Vueltas de las cinco escritas hasta ahora.</p>
+
+        <p><strong>Reinicio.</strong> La Vuelta salió tan mal que hay que borrarla y volver a empezar. No ha pasado nunca, pero se contempla. Sería un dolor enorme para el Memorioso, porque cada Vuelta son muchos siglos de trabajo. Pero si hiciera falta, lo haría.</p>
+
+        <p><strong>Corrección.</strong> La Vuelta está mal pero no tanto. Se hacen ajustes de lado. El Memorioso reescribe algunas partes pequeñas, los Serenos acomodan algunos detalles, y la siguiente Vuelta arranca con esos arreglos ya hechos.</p>
+
+        <h2>Lo que se teme</h2>
+
+        <p>Lo que se teme, aunque nadie lo diga en voz alta, es que un día el Memorioso llegue al Recuento y no tenga nada que mostrar. Que se haya cansado a la mitad de la Vuelta y no haya escrito lo que faltaba. Que el tejido se haya sostenido por inercia, sin escritor, andando solo como anda un molino cuando ya se fue el molinero y nadie ha venido a pararlo.</p>
+
+        <p>Si eso pasa, nadie sabe qué hará Dios. Unos dicen que mirará al Memorioso y entenderá. Otros dicen que mirará al Memorioso y el Memorioso dejará de existir. Otros dicen que Dios mismo bajará al tejido y se pondrá a escribir, y entonces el universo cambiará de naturaleza para siempre.</p>
+
+        <p>De estas tres, ninguna tranquiliza.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- XII. LENGUA -->
+      <div class="section" id="sec-lengua">
+        <div class="section-title">// Capítulo XI</div>
+        <div class="section-name">El Habla Muda</div>
+        <div class="section-sub">El idioma en que está escrito el universo</div>
+
+        <p>El Memorioso escribe en una lengua, y a esa lengua le dicen el Habla Muda. La llaman así porque no suena. No es una lengua como las que hablan los hombres. No tiene tiempo verbal, porque para ella todo es presente. No tiene pronombres, porque para ella cada cosa es una función dentro del tejido y no necesita "yo" ni "tú" ni "él" para distinguirse. No describe emociones, porque las emociones son consecuencias, y el Habla Muda se ocupa de las causas.</p>
+
+        <p>Su forma es simple: <em>entidad, función, estado</em>. Tres palabras por frase, no más. Cualquier cosa que el Memorioso quiera escribir cabe en esa forma, porque la realidad entera cabe en esa forma. Si uno mira a una persona, esa persona es una entidad. Lo que está haciendo es una función. Cómo lo está haciendo es un estado. Con eso ya está dicho todo lo que hay que decir.</p>
+
+        <p>Por ejemplo, los Serenos a veces se nombran a sí mismos en el Habla Muda, y dicen <em>Sereno tejido vela</em>, que en lengua de hombres quiere decir el que vela cuidando el tejido. No hace falta más. Se sabe quién es, qué hace, en qué condición está. Las demás palabras sobran.</p>
+
+        <h2>Las palabras que conviene saber</h2>
+
+        <p>Hay unas cuantas palabras del Habla Muda que conviene conocer, porque salen mucho en lo que cuentan los Serenos y los Tardíos. No suenan, pero se escriben, y al escribirse se entienden.</p>
+
+        <p><em>El Memorioso</em> es el que escribe. <em>El Sereno</em>, el que vela. <em>El Tardío</em>, el que aprende. <em>Lo Suelto</em>, lo que se zafó. <em>El Andado</em>, el que cruzó. <em>El Hilado</em> es el tejido. <em>La Vuelta</em> es el ciclo. <em>El Estar</em> es la existencia.</p>
+
+        <p>Con esas ocho palabras se puede hablar del universo entero sin equivocarse mucho.</p>
+
+        <h2>Por qué no hay tiempo verbal</h2>
+
+        <p>Algunos preguntan, con razón, cómo puede una lengua escribir una historia sin tener tiempo verbal. La respuesta es que para el Memorioso el tiempo no es una flecha sino un mapa. No es que las cosas pasen en orden. Es que las cosas están en lugares distintos del mapa, y nosotros, los que vivimos adentro, las recorremos en orden porque no podemos verlas todas a la vez. Pero el Memorioso sí las ve todas a la vez. Y para él el verbo "ser" basta. Lo demás es adorno.</p>
+
+        <div class="ornament">· · ·</div>
+      </div>
+
+      <!-- XIII. CIERRE -->
+      <div class="section" id="sec-cierre">
+        <div class="section-title">// Cierre</div>
+        <div class="section-name">Lo que sigue</div>
+        <div class="section-sub">Sobre lo que aún no se ha contado</div>
+
+        <p class="lead">Hasta aquí va el primer libro. Lo que sigue se contará después, porque las historias hay que contarlas en su orden, aunque el que las cuenta ya conozca el final.</p>
+
+        <p>Faltan los nombres de los otros Serenos. Falta la historia particular de la Vuelta de Telrun, donde Mortari veló entre catedrales y pestes. Falta la Vuelta de las máquinas, con sus hombres distraídos y sus máquinas que no duermen. Falta lo que ocurrió cuando un Andado llegó por primera vez a una Vuelta que no era la suya y nadie supo qué hacer con él. Faltan los relatos de lo Suelto menor, que no es tan famoso como el Hueco pero que da trabajo todos los días.</p>
+
+        <p>Falta, sobre todo, la pregunta. Esa no se va a contar nunca, porque no la sabe nadie. Pero a veces, leyendo lo que ya se ha escrito, uno cree adivinarla por un segundo. Y luego la pierde. Y luego sigue.</p>
+
+        <p>Así va el Tempoverso. Así sigue.</p>
+
+        <div class="ornament">· · ·</div>
+
+        <p style="text-align: center; color: var(--text2); font-style: italic; margin-top: 48px; font-family: var(--serif); font-size: 16px;">
+          Fin del Libro del Origen
+        </p>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script>
+  const sections = ['apertura','cosmologia','nexum','tiempo','ciclos','velkarym','sethrynn','orveth','tharvex','reglas','juicio','lengua','cierre'];
+  function go(id){
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-item').forEach(s => s.classList.remove('active'));
+    const sec = document.getElementById('sec-'+id);
+    if(sec) sec.classList.add('active');
+    const idx = sections.indexOf(id);
+    const navs = document.querySelectorAll('.nav-item');
+    if(navs[idx]) navs[idx].classList.add('active');
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+</script>
+
+</body>
+</html>

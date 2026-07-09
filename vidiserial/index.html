@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://fonts.cdnfonts.com" crossorigin>
 <!-- UI fonts -->
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <!-- RSVP font options -->
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Montserrat:wght@300;400;500;600;700;800&family=Sora:wght@300;400;500;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700&family=Playfair+Display:wght@400;500;600;700&family=DM+Serif+Display&family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <!-- Proxima Nova (vía cdnfonts; fallback automático a Mona Sans / Montserrat si no carga) -->
@@ -16,23 +16,23 @@
 <!-- MP4 muxer (H.264 + AAC container, sin WebAssembly) -->
 <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@4/build/mp4-muxer.js"></script>
 <style>
-  /* ---------- design tokens — tema vidiclip ---------- */
+  /* ---------- design tokens ---------- */
   :root{
-    --bg:        #0c0c0e;
+    --bg:        #0a0a0b;
     --bg-2:      #131316;
-    --panel:     #1a1a1f;
-    --line:      #2e2e36;
-    --line-2:    #3a3a44;
-    --ink:       #eeeae2;
-    --ink-2:     #8f8fa0;
-    --ink-3:     #6b6b7a;
-    --accent:    #f5c842;
-    --accent-2:  #e8a020;
-    --good:      #4eca8b;
-    --bad:       #e85454;
+    --panel:     #18181c;
+    --line:      #26262d;
+    --line-2:    #34343d;
+    --ink:       #ededf0;
+    --ink-2:     #a8a8b0;
+    --ink-3:     #6b6b75;
+    --accent:    #ff5b2e;     /* coral cinemático */
+    --accent-2:  #ffd166;     /* dorado pálido */
+    --good:      #6ee7b7;
+    --bad:       #ff6b6b;
     --radius:    10px;
     --shadow:    0 30px 80px -30px rgba(0,0,0,.7), 0 8px 24px -8px rgba(0,0,0,.5);
-    --serif:     "Syne", system-ui, sans-serif;
+    --serif:     "Fraunces", "Times New Roman", serif;
     --sans:      "Instrument Sans", system-ui, sans-serif;
     --mono:      "JetBrains Mono", ui-monospace, monospace;
   }
@@ -44,7 +44,8 @@
     font-family:var(--sans);
     color:var(--ink);
     background:
-      radial-gradient(1200px 600px at 80% -10%, rgba(245,200,66,.04), transparent 60%),
+      radial-gradient(1200px 600px at 80% -10%, rgba(255,91,46,.07), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(255,209,102,.05), transparent 60%),
       var(--bg);
     overflow-x:hidden;
     -webkit-font-smoothing:antialiased;
@@ -370,7 +371,7 @@
   /* ---------- center stage ---------- */
   .stage{
     background:
-      radial-gradient(800px 400px at 50% 0%, rgba(245,200,66,.03), transparent 70%),
+      radial-gradient(800px 400px at 50% 0%, rgba(255,91,46,.04), transparent 70%),
       var(--bg);
     display:flex; flex-direction:column;
     align-items:center; justify-content:flex-start;

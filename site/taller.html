@@ -105,17 +105,12 @@
   <div class="section-header">
     <div class="section-header-mark">// Taller</div>
     <h2>Las herramientas del Hilado</h2>
-    <p>Las tres herramientas con las que se teje el Tempoverso. Cada una debe estar corriendo en su puerto.</p>
+    <p>Las tres herramientas con las que se teje el Tempoverso.</p>
   </div>
 
   <div class="content-grid">
-    <div class="taller-note">
-      Inicia cada herramienta con <code style="color:var(--gold);font-family:'Courier New',monospace;">node server.js</code> desde su carpeta antes de abrir el enlace.
-    </div>
-
     <div class="taller-grid">
 
-      <!-- VIDICLIP: se sirve desde el servidor principal, no necesita puerto propio -->
       <a class="tool-card" href="/taller/vidiclip" target="_blank">
         <div class="tool-card-icon">🎬</div>
         <div class="tool-card-label">Vidiclip</div>
@@ -124,11 +119,9 @@
           Editor de stories tipo 9:16. Texto RSVP sobre fondos de imagen o video,
           música, título y exportación a MP4. Integra con R2 y Facebook para publicación.
         </div>
-        <div class="tool-card-port">Abre directo — no necesita servidor aparte</div>
       </a>
 
-      <!-- VIDISERIAL: necesita su propio servidor -->
-      <div class="tool-card" onclick="abrirOInstruir('http://localhost:3748', 'vidiserial')" style="cursor:pointer;">
+      <a class="tool-card" href="/taller/vidiserial" target="_blank">
         <div class="tool-card-icon">📖</div>
         <div class="tool-card-label">Vidiserial</div>
         <div class="tool-card-name">El Lector</div>
@@ -136,11 +129,9 @@
           Lector RSVP vertical para crear videos tipo story. Slideshow de imágenes y videos,
           fuentes configurables, velocidad ajustable, exportación a MP4 1080×1920.
         </div>
-        <div class="tool-card-port" id="estado-vidiserial">Verificando...</div>
-      </div>
+      </a>
 
-      <!-- VIDIWRITE: necesita su propio servidor -->
-      <div class="tool-card" onclick="abrirOInstruir('http://localhost:3900', 'vidiwrite')" style="cursor:pointer;">
+      <a class="tool-card" href="/taller/vidiwrite" target="_blank">
         <div class="tool-card-icon">✦</div>
         <div class="tool-card-label">Vidiwrite</div>
         <div class="tool-card-name">El Escribano</div>
@@ -148,8 +139,7 @@
           Editor de historias con sugerencias de IA en tiempo real. Marcadores <code style="color:var(--gold);">[[descripción]]</code>
           para que Claude complete fragmentos. Exporta a Notion.
         </div>
-        <div class="tool-card-port" id="estado-vidiwrite">Verificando...</div>
-      </div>
+      </a>
 
     </div>
   </div>
@@ -160,44 +150,5 @@
   </footer>
 </div>
 
-<script>
-const cmds = {
-  vidiserial: { port: 3748, carpeta: 'vidiserial' },
-  vidiwrite:  { port: 3900, carpeta: 'vidiwrite'  },
-};
-
-async function ping(port) {
-  try {
-    const r = await fetch(`http://localhost:${port}/`, { signal: AbortSignal.timeout(1200) });
-    return r.ok || r.status < 500;
-  } catch { return false; }
-}
-
-async function verificar() {
-  for (const [id, cfg] of Object.entries(cmds)) {
-    const el = document.getElementById('estado-' + id);
-    const ok = await ping(cfg.port);
-    if (ok) {
-      el.innerHTML = `<span style="color:var(--success,#4eca8b);">● Corriendo</span> en puerto <span style="font-family:monospace;color:var(--gold-dim);">:${cfg.port}</span>`;
-    } else {
-      el.innerHTML = `<span style="color:var(--danger,#e85454);">○ Apagado</span> — abre una terminal y corre:<br>
-        <code style="font-family:monospace;color:var(--gold);font-size:11px;">cd ../${cfg.carpeta} &amp;&amp; node server.js</code>`;
-    }
-  }
-}
-
-function abrirOInstruir(url, id) {
-  const el = document.getElementById('estado-' + id);
-  if (el && el.innerHTML.includes('Corriendo')) {
-    window.open(url, '_blank');
-  } else {
-    el.style.outline = '1px solid var(--gold)';
-    setTimeout(() => el.style.outline = '', 1500);
-  }
-}
-
-verificar();
-setInterval(verificar, 5000);
-</script>
 </body>
 </html>

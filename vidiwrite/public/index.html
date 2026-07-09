@@ -5,26 +5,26 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>vidiwriter — Ayudante en redaccion de historias</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Instrument+Sans:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --ink:       #eeeae2;
-  --parch:     #0c0c0e;
-  --parch2:    #131316;
-  --parch3:    #1a1a1f;
-  --sepia:     #6b6b7a;
-  --sepia2:    #8f8fa0;
-  --red:       #f5c842;
-  --green:     #4eca8b;
-  --panel:     #0c0c0e;
-  --border:    #2e2e36;
-  --shadow:    rgba(0,0,0,0.5);
-  --highlight: #1a1a1f;
-  --mono:      'JetBrains Mono', ui-monospace, monospace;
-  --sans:      'Instrument Sans', system-ui, sans-serif;
-  --serif:     'Syne', system-ui, sans-serif;
+  --ink: #FDFFFC;
+  --parch: #0a0c24;
+  --parch2: #0d1030;
+  --parch3: #111440;
+  --sepia: #8fa8bc;
+  --sepia2: #adc2d4;
+  --red: #CF5C36;
+  --green: #2EC4B6;
+  --panel: #080a1e;
+  --border: #577590;
+  --shadow: rgba(5,5,23,0.4);
+  --highlight: #0f1235;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', sans-serif;
+  --serif: 'Playfair Display', serif;
 }
 
 html, body { height: 100%; overflow: hidden; }
@@ -523,7 +523,7 @@ body {
 
 <!-- TOP BAR -->
 <div id="topbar">
-  <h1>Vidi<span>write</span></h1>
+  <h1>Story<span>Forge</span></h1>
   <button class="topbtn primary" onclick="runAnalysis()">▶ Confirmar</button>
   <button class="topbtn" onclick="buildFinal()">✦ Integrar Historia</button>
   <button class="topbtn notion" onclick="publishToNotion()">N↑ Notion</button>
@@ -617,6 +617,42 @@ body {
       </div>
       <p class="setting-note">El título de la historia se usará como nombre de página en Notion. El contenido se sube como cuerpo de la página.</p>
 
+      <div class="setting-divider"></div>
+
+      <!-- COLORES -->
+      <div class="setting-group">
+        <label>Colores de la interfaz</label>
+      </div>
+      <div class="color-grid">
+        <div class="color-row">
+          <input type="color" id="clr-panel"     title="Fondo principal">
+          <span>Fondo</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-topbar"    title="Topbar">
+          <span>Topbar</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-ink"       title="Texto principal">
+          <span>Texto</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-border"    title="Bordes">
+          <span>Bordes</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-red"       title="Acento primario">
+          <span>Acento 1</span>
+        </div>
+        <div class="color-row">
+          <input type="color" id="clr-green"     title="Acento secundario">
+          <span>Acento 2</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="inline-btn" style="flex:1" onclick="resetColors()">Restablecer</button>
+        <button class="inline-btn" style="flex:1;border-color:var(--green);color:var(--green)" onclick="saveColors()">Guardar colores</button>
+      </div>
 
       <div class="setting-divider"></div>
 
@@ -764,7 +800,7 @@ Devuelve exactamente ${count} opciones como JSON:
 Cada opción debe ser concisa (2-6 palabras), históricamente apropiada y encajar naturalmente en el contexto de la historia.`;
 
   try {
-    const resp = await fetch('/.netlify/functions/claude', {
+    const resp = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -838,7 +874,7 @@ Historia:
 ${composed}`;
 
   try {
-    const resp = await fetch('/.netlify/functions/claude', {
+    const resp = await fetch('/api/claude', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -884,7 +920,7 @@ async function publishToNotion() {
   setStatus('', '↑ Analizando historia y subiendo a Notion…');
 
   try {
-    const resp = await fetch('/.netlify/functions/notion/create', {
+    const resp = await fetch('/api/notion/create', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -911,7 +947,7 @@ async function testNotion() {
   if (!token) { setStatus('error', '⚠ Ingresa el Notion Token'); return; }
   setStatus('', 'Probando conexión Notion…');
   try {
-    const resp = await fetch('/.netlify/functions/notion/databases', {
+    const resp = await fetch('/api/notion/databases', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ notionToken: token })
@@ -943,9 +979,88 @@ function setStatus(type, msg) {
 }
 
 // ── COLORS ──────────────────────────────────────────────
+const DEFAULT_COLORS = {
+  panel:  '#080a1e',
+  topbar: '#0d1030',
+  ink:    '#FDFFFC',
+  border: '#577590',
+  red:    '#CF5C36',
+  green:  '#2EC4B6'
+};
+
+function applyColors(c) {
+  const r = document.documentElement.style;
+  r.setProperty('--panel',    c.panel);
+  r.setProperty('--parch',    c.panel);
+  r.setProperty('--parch2',   c.topbar);
+  r.setProperty('--parch3',   adjustBrightness(c.topbar, -10));
+  r.setProperty('--highlight', adjustBrightness(c.panel, 8));
+  r.setProperty('--ink',      c.ink);
+  r.setProperty('--border',   c.border);
+  r.setProperty('--sepia',    c.border);
+  r.setProperty('--sepia2',   adjustBrightness(c.border, 20));
+  r.setProperty('--red',      c.red);
+  r.setProperty('--green',    c.green);
+}
+
+function adjustBrightness(hex, pct) {
+  const n = parseInt(hex.replace('#',''), 16);
+  const r = Math.min(255, Math.max(0, (n >> 16) + pct));
+  const g = Math.min(255, Math.max(0, ((n >> 8) & 0xff) + pct));
+  const b = Math.min(255, Math.max(0, (n & 0xff) + pct));
+  return '#' + [r,g,b].map(v => v.toString(16).padStart(2,'0')).join('');
+}
+
+function loadColors() {
+  const saved = JSON.parse(localStorage.getItem('sf_colors') || 'null') || DEFAULT_COLORS;
+  document.getElementById('clr-panel').value   = saved.panel;
+  document.getElementById('clr-topbar').value  = saved.topbar;
+  document.getElementById('clr-ink').value     = saved.ink;
+  document.getElementById('clr-border').value  = saved.border;
+  document.getElementById('clr-red').value     = saved.red;
+  document.getElementById('clr-green').value   = saved.green;
+  applyColors(saved);
+
+  ['panel','topbar','ink','border','red','green'].forEach(key => {
+    document.getElementById('clr-' + key).addEventListener('input', () => {
+      applyColors(readColorInputs());
+    });
+  });
+}
+
+function readColorInputs() {
+  return {
+    panel:  document.getElementById('clr-panel').value,
+    topbar: document.getElementById('clr-topbar').value,
+    ink:    document.getElementById('clr-ink').value,
+    border: document.getElementById('clr-border').value,
+    red:    document.getElementById('clr-red').value,
+    green:  document.getElementById('clr-green').value
+  };
+}
+
+function saveColors() {
+  const c = readColorInputs();
+  localStorage.setItem('sf_colors', JSON.stringify(c));
+  applyColors(c);
+  setStatus('ok', '✓ Colores guardados');
+}
+
+function resetColors() {
+  localStorage.removeItem('sf_colors');
+  document.getElementById('clr-panel').value   = DEFAULT_COLORS.panel;
+  document.getElementById('clr-topbar').value  = DEFAULT_COLORS.topbar;
+  document.getElementById('clr-ink').value     = DEFAULT_COLORS.ink;
+  document.getElementById('clr-border').value  = DEFAULT_COLORS.border;
+  document.getElementById('clr-red').value     = DEFAULT_COLORS.red;
+  document.getElementById('clr-green').value   = DEFAULT_COLORS.green;
+  applyColors(DEFAULT_COLORS);
+  setStatus('', 'Colores restablecidos');
+}
 
 // ── INIT ────────────────────────────────────────────────
 loadSettings();
+loadColors();
 updateCharCount();
 </script>
 </body>

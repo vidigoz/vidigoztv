@@ -1,0 +1,16 @@
+{
+  "name": "rsvp-stories",
+  "version": "1.0.0",
+  "description": "Vertical RSVP reader (9:16) with image/video backgrounds and WebM export",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": ["rsvp", "video", "stories", "vidiclip"],
+  "author": "Victor",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16"
+  }
+}

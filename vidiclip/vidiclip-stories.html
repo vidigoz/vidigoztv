@@ -866,7 +866,7 @@ const APP = {
   chroma: { color: { r:0,g:255,b:0 }, tol: 50, smooth: 15 },
 };
 
-const NOTION_PROXY = '/.netlify/functions/notion-proxy';
+const NOTION_PROXY = 'http://localhost:3747/notion/v1';
 
 // ════════════════════════════════════════════════════
 // CANVAS SETUP
@@ -1536,19 +1536,10 @@ async function exportVideo() {
 // ════════════════════════════════════════════════════
 // PUBLISH TO META
 // ════════════════════════════════════════════════════
-const META_SERVER = '';
+const META_SERVER = 'http://localhost:3747';
 const META_BASE   = 'https://graph.facebook.com';
 
 async function metaCall(path, data) {
-  const res = await fetch(`/.netlify/functions/meta`, {
-    method:  'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ path, method: 'POST', data }),
-  });
-  return res.json();
-}
-
-async function metaCallDirect(path, data) {
   const res = await fetch(`${META_BASE}${path}`, {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1704,6 +1695,15 @@ async function pollIGContainer(containerId, token, maxRetries = 30) {
 }
 
 async function uploadToStorage(blob, filename, contentType='video/webm') {
+  const SERVER = 'http://localhost:3747';
+
+  // First check server is running
+  try {
+    await fetch(`${SERVER}/ping`);
+  } catch(e) {
+    throw new Error('El servidor local no está corriendo. Abre una terminal y corre: node server.js');
+  }
+
   const endpoint  = getCfg('storageURL').replace(/\/vidiclip-videos\/?$/, '').replace(/\/$/, '');
   const accessKey = getCfg('storageKey');
   const secretKey = getCfg('storageSecret');
@@ -1713,7 +1713,7 @@ async function uploadToStorage(blob, filename, contentType='video/webm') {
     throw new Error('Faltan credenciales de R2 en Configuración');
   }
 
-  const res = await fetch('/.netlify/functions/r2', {
+  const res = await fetch(`${SERVER}/upload`, {
     method:  'POST',
     headers: {
       'x-access-key':   accessKey,
@@ -1913,9 +1913,15 @@ renderBg();
 
 // ════ AUTOLOAD ASSETS ════
 async function autoloadAssets() {
-  // Autoload solo funciona en local con el servidor de assets corriendo
-  console.log('Autoload: desactivado en producción');
-  return;
+  const BASE = 'http://localhost:3747';
+
+  // Wait for server with retries
+  let serverOk = false;
+  for (let i = 0; i < 5; i++) {
+    try { await fetch(`${BASE}/ping`); serverOk = true; break; }
+    catch(e) { await new Promise(r => setTimeout(r, 800)); }
+  }
+  if (!serverOk) { console.log('Autoload: server not available'); return; }
 
   // Video — set src directly to server URL so browser streams it (no full-blob download)
   try {

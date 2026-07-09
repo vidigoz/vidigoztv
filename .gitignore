@@ -1,0 +1,19 @@
+# Local Netlify folder
+.netlify
+
+# OS files
+.DS_Store
+
+# Dependencies
+node_modules/
+
+# Secrets / local notes with API keys — nunca subir
+*.env
+.env.*
+keys.txt
+*keys*.txt
+terminalruns.txt
+*secret*
+*credential*
+*.pem
+vidiclip/.claude/
