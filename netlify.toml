@@ -5,17 +5,17 @@
 # ── Taller: cada herramienta vive en su subcarpeta dentro de site/ ────────────
 [[redirects]]
   from   = "/taller/vidiclip"
-  to     = "/vidiclip/index.html"
+  to     = "/taller/vidiclip/index.html"
   status = 200
 
 [[redirects]]
   from   = "/taller/vidiserial"
-  to     = "/vidiserial/index.html"
+  to     = "/taller/vidiserial/index.html"
   status = 200
 
 [[redirects]]
   from   = "/taller/vidiwrite"
-  to     = "/vidiwrite/index.html"
+  to     = "/taller/vidiwrite/index.html"
   status = 200
 
 # ── SPA fallback — debe ir al final ──────────────────────────────────────────
