@@ -6,6 +6,8 @@
 
 # Dependencies
 node_modules/
+# Netlify functions necesitan sus deps vendidas (sin build step que las instale)
+!netlify/functions/node_modules/
 
 # Secrets / local notes with API keys — nunca subir
 *.env
