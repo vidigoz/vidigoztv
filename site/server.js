@@ -5,15 +5,27 @@ const path = require('path');
 const PORT = 4000;
 const ROOT = __dirname;
 
-// ── Leer contraseña de .env ──
+// ── Leer configuración de .env ──
 let TALLER_PASSWORD = 'admin';
+let NOTION_DB_ID = '';
+let NOTION_TOKEN = '';
+
 try {
   const envPath = path.join(__dirname, '..', '.env');
   const envContent = fs.readFileSync(envPath, 'utf8');
-  const match = envContent.match(/taller\s*=\s*"([^"]+)"/);
-  if (match) TALLER_PASSWORD = match[1];
+
+  const tallerMatch = envContent.match(/taller\s*=\s*"([^"]+)"/);
+  if (tallerMatch) TALLER_PASSWORD = tallerMatch[1];
+
+  const dbMatch = envContent.match(/^db_id\s*=\s*(.+)$/m);
+  if (dbMatch) NOTION_DB_ID = dbMatch[1].trim();
+
+  const tokenMatch = envContent.match(/^integration_token\s*=\s*(.+)$/m);
+  if (tokenMatch) NOTION_TOKEN = tokenMatch[1].trim();
+
+  console.log(`[env] taller=*** db_id=${NOTION_DB_ID ? '✓' : '✗'} integration_token=${NOTION_TOKEN ? '✓' : '✗'}`);
 } catch (e) {
-  console.log('[!] No se pudo leer .env, usando contraseña por defecto');
+  console.log('[!] No se pudo leer .env, usando valores por defecto');
 }
 
 const MIME = {
@@ -83,14 +95,19 @@ http.createServer((req, res) => {
   // Normalize trailing slash → index.html
   if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
 
-  // ── PROTEGER /taller/* con Basic Auth ──
-  if (urlPath.startsWith('/taller')) {
+  // ── /taller (hub) → protegido con contraseña ──
+  if (urlPath === '/taller' || urlPath === '/taller/') {
     const auth = parseBasicAuth(req);
     if (!auth || auth.pass !== TALLER_PASSWORD) {
       requireAuth(res);
       return;
     }
-    // Autenticado: servir archivos de taller
+    serveFile(path.join(__dirname, 'taller/index.html'), res);
+    return;
+  }
+
+  // ── /taller/* (herramientas) → acceso libre una vez dentro ──
+  if (urlPath.startsWith('/taller/')) {
     handleTallerRoute(urlPath, req, res);
     return;
   }
@@ -133,9 +150,9 @@ http.createServer((req, res) => {
 
 // ── Servir rutas de taller (ya autenticado) ──
 function handleTallerRoute(urlPath, req, res) {
-  // /taller/vidiclip → taller/vidiclip/index.html
+  // /taller/vidiclip → taller/vidiclip/index.html (con inyección de .env)
   if (urlPath === '/taller/vidiclip' || urlPath === '/taller/vidiclip/') {
-    serveFile(path.join(__dirname, 'taller/vidiclip/index.html'), res);
+    serveVidiclip(res);
     return;
   }
 
@@ -192,4 +209,41 @@ function serveFile(filePath, res) {
   });
 
   fs.createReadStream(filePath).pipe(res);
+}
+
+// ── Servir Vidiclip con variables de entorno inyectadas ──
+function serveVidiclip(res) {
+  const filePath = path.join(__dirname, 'taller/vidiclip/index.html');
+  let html = fs.readFileSync(filePath, 'utf8');
+
+  // Inyectar script que precarga las variables de Notion desde .env en localStorage
+  // solo si el usuario no las ha configurado ya manualmente
+  const envScript = `
+<script>
+(function() {
+  const DB_ID  = ${JSON.stringify(NOTION_DB_ID)};
+  const TOKEN  = ${JSON.stringify(NOTION_TOKEN)};
+  if (DB_ID && !localStorage.getItem('vdc_notionDB')) {
+    localStorage.setItem('vdc_notionDB', DB_ID);
+  }
+  if (TOKEN && !localStorage.getItem('vdc_notionToken')) {
+    localStorage.setItem('vdc_notionToken', TOKEN);
+  }
+  if (DB_ID || TOKEN) {
+    console.log('[autoenv] Notion config precargada desde .env');
+  }
+})();
+</script>
+`;
+
+  // Insertar justo antes de </body>
+  html = html.replace('</body>', envScript + '\n</body>');
+
+  const buf = Buffer.from(html, 'utf8');
+  res.writeHead(200, {
+    'Content-Type':   'text/html; charset=utf-8',
+    'Content-Length': buf.length,
+    'Cache-Control':  'no-cache',
+  });
+  res.end(buf);
 }

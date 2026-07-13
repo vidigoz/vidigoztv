@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taller — VidigozTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    background: #050410;
+    font-family: 'Manrope', system-ui, sans-serif;
+    display: flex; justify-content: center; min-height: 100vh;
+  }
+  .page {
+    width: 100%; max-width: 460px;
+    padding: 60px 20px 56px;
+    display: flex; flex-direction: column; gap: 28px;
+    align-items: center;
+  }
+  .header { text-align: center; }
+  .icon-lock { font-size: 40px; margin-bottom: 12px; }
+  .title { font: 700 24px 'Space Grotesk', sans-serif; color: #f2efe9; letter-spacing: .1em; }
+  .subtitle { font-size: 13px; color: rgba(255,255,255,.45); margin-top: 6px; }
+  .divider { width: 40px; height: 2px; background: #e2632f; margin: 8px auto 0; border-radius: 1px; }
+
+  .tools { display: flex; flex-direction: column; gap: 14px; width: 100%; }
+  .tool-card {
+    display: flex; align-items: center; gap: 16px;
+    background: #16142a; border-radius: 16px;
+    padding: 20px; text-decoration: none;
+    transition: transform .18s ease, border-color .18s ease;
+    border: 1px solid transparent;
+  }
+  .tool-card:hover { transform: translateX(4px); border-color: #e2632f; }
+  .tool-card:active { transform: scale(.98); }
+
+  .tool-icon {
+    width: 52px; height: 52px; flex: none;
+    border-radius: 14px; background: #0c0a1c;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tool-info { flex: 1; }
+  .tool-name { font: 600 16px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .tool-desc { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 3px; }
+  .tool-arrow { color: rgba(255,255,255,.3); font-size: 18px; }
+
+  .back-link { color: rgba(255,255,255,.35); font-size: 13px; text-decoration: none; margin-top: 10px; transition: color .2s; }
+  .back-link:hover { color: #e2632f; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div class="icon-lock">🔒</div>
+    <div class="title">TALLER</div>
+    <div class="subtitle">Herramientas internas de VidigozTV</div>
+    <div class="divider"></div>
+  </div>
+
+  <div class="tools">
+    <a class="tool-card" href="/taller/vidiclip">
+      <div class="tool-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e2632f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+      </div>
+      <div class="tool-info">
+        <div class="tool-name">Vidiclip</div>
+        <div class="tool-desc">Creación de video-clips</div>
+      </div>
+      <span class="tool-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="/taller/vidiwrite">
+      <div class="tool-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e2632f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+      </div>
+      <div class="tool-info">
+        <div class="tool-name">Vidiwrite</div>
+        <div class="tool-desc">Escritura de guiones</div>
+      </div>
+      <span class="tool-arrow">→</span>
+    </a>
+
+    <a class="tool-card" href="/taller/vidiserial">
+      <div class="tool-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#e2632f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+      </div>
+      <div class="tool-info">
+        <div class="tool-name">Vidiserial</div>
+        <div class="tool-desc">Producción de series</div>
+      </div>
+      <span class="tool-arrow">→</span>
+    </a>
+  </div>
+
+  <a class="back-link" href="/">← Volver al inicio</a>
+</div>
+
+</body>
+</html>

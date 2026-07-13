@@ -9,7 +9,38 @@ exports.handler = async (event) => {
   try { body = JSON.parse(event.body); }
   catch { return { statusCode: 400, body: 'Invalid JSON' }; }
 
-  const action = event.path.split('/').pop(); // 'create' | 'databases'
+  const action = event.path.split('/').pop(); // 'create' | 'databases' | 'schema'
+
+  // ── Obtener esquema (campos) de una base de datos ──────────────────────────
+  if (action === 'schema') {
+    const { notionToken, databaseId } = body;
+    if (!notionToken || !databaseId) {
+      return { statusCode: 400, body: JSON.stringify({ error: 'Faltan notionToken o databaseId' }) };
+    }
+    try {
+      const notion = new Client({ auth: notionToken });
+      const rawId = databaseId.replace(/-/g, '');
+      const formattedId = rawId.length === 32
+        ? `${rawId.slice(0,8)}-${rawId.slice(8,12)}-${rawId.slice(12,16)}-${rawId.slice(16,20)}-${rawId.slice(20)}`
+        : databaseId;
+
+      const db = await notion.databases.retrieve({ database_id: formattedId });
+      const fields = Object.entries(db.properties).map(([name, prop]) => {
+        const f = { name, type: prop.type };
+        if (prop.type === 'select')       f.options = prop.select.options.map(o => o.name);
+        if (prop.type === 'multi_select') f.options = prop.multi_select.options.map(o => o.name);
+        if (prop.type === 'status')       f.options = prop.status.options.map(o => o.name);
+        return f;
+      });
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dbTitle: db.title?.[0]?.plain_text || '', fields }),
+      };
+    } catch (err) {
+      return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
+    }
+  }
 
   // ── Listar bases de datos ──────────────────────────────────────────────────
   if (action === 'databases') {
@@ -33,10 +64,13 @@ exports.handler = async (event) => {
 
   // ── Crear página en Notion ─────────────────────────────────────────────────
   if (action === 'create') {
-    const { notionToken, databaseId, content, apiKey, model } = body;
+    const { notionToken, databaseId, content, apiKey, model, fieldConfig } = body;
     if (!notionToken || !databaseId || !content) {
       return { statusCode: 400, body: JSON.stringify({ error: 'Faltan campos requeridos' }) };
     }
+
+    // fieldConfig: { "<nombre campo>": { mode: 'extract' | 'value', value?: <manual> } }
+    const cfg = fieldConfig && typeof fieldConfig === 'object' ? fieldConfig : {};
 
     try {
       const notion = new Client({ auth: notionToken });
@@ -47,10 +81,26 @@ exports.handler = async (event) => {
         ? `${rawId.slice(0,8)}-${rawId.slice(8,12)}-${rawId.slice(12,16)}-${rawId.slice(16,20)}-${rawId.slice(20)}`
         : databaseId;
 
-      // Extraer campos con Claude si hay apiKey
+      // Obtener esquema de la DB
+      const db    = await notion.databases.retrieve({ database_id: formattedId });
+      const props = db.properties;
+
+      // Un campo cuyo nombre sea "Historia/Contenido/Story" recibe el texto crudo, no una extracción
+      const isStoryField = (name) => /^(historia|contenido|story|content)$/i.test(name.trim());
+
+      // ¿Qué campos de texto/número hay que EXTRAER con Claude?
+      // Se extraen solo los campos activados en modo 'extract' que existan en la DB (excepto el de la historia cruda).
+      const extractable = Object.entries(cfg)
+        .filter(([name, c]) => c && c.mode === 'extract' && props[name] &&
+          !isStoryField(name) &&
+          ['title', 'rich_text', 'number'].includes(props[name].type))
+        .map(([name]) => name);
+
+      // Extraer campos con Claude si hay apiKey y algo que extraer
       let extracted = {};
-      if (apiKey) {
-        const claudeModel = model || 'claude-sonnet-4-6';
+      if (apiKey && extractable.length) {
+        const claudeModel = model || 'claude-sonnet-5';
+        const fieldList = extractable.map(n => `  "${n}": "valor para el campo '${n}'${n.toLowerCase().includes('año') || props[n].type === 'number' ? ' (solo el número)' : ''}${/prompt/i.test(n) ? ' — prompt detallado en inglés para Midjourney, estilo fotorrealista o pictórico histórico' : ''}"`).join(',\n');
         const extractResp = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
           headers: {
@@ -60,17 +110,12 @@ exports.handler = async (event) => {
           },
           body: JSON.stringify({
             model: claudeModel,
-            system: 'Eres un asistente que extrae información estructurada de historias. Responde SOLO con JSON válido, sin texto extra ni backticks.',
+            system: 'Eres un asistente que extrae información estructurada de historias. Responde SOLO con JSON válido, sin texto extra ni backticks. Usa exactamente las claves indicadas.',
             messages: [{
               role: 'user',
-              content: `Analiza esta historia y extrae la siguiente información en JSON:
+              content: `Analiza esta historia y extrae la siguiente información en JSON con estas claves exactas:
 {
-  "titulo": "título corto y atractivo para la historia",
-  "oficio": "oficio o profesión del personaje principal",
-  "anio": "año donde se desarrolla la historia (solo el número)",
-  "lugar": "lugar donde se desarrolla la historia",
-  "sopa": "la sopa que se menciona en la historia",
-  "prompt_imagen": "prompt detallado en inglés para Midjourney que capture la escena principal de la historia, estilo fotorrealista o pictórico histórico"
+${fieldList}
 }
 
 Historia:
@@ -84,73 +129,50 @@ ${content}`,
         try { extracted = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch {}
       }
 
-      // Obtener esquema de la DB
-      const db   = await notion.databases.retrieve({ database_id: formattedId });
-      const props = db.properties;
-
-      const findProp = (names, type) => {
-        for (const name of names) {
-          const entry = Object.entries(props).find(([k, v]) =>
-            v.type === type && k.toLowerCase() === name.toLowerCase()
-          );
-          if (entry) return entry;
-        }
-        for (const name of names) {
-          const entry = Object.entries(props).find(([k, v]) =>
-            v.type === type && k.toLowerCase().includes(name.toLowerCase())
-          );
-          if (entry) return entry;
-        }
-        return null;
-      };
-
+      // Armar propiedades según la configuración de campos
       const pageProps = {};
 
-      const titleProp = Object.entries(props).find(([, v]) => v.type === 'title');
-      if (titleProp && extracted.titulo)
-        pageProps[titleProp[0]] = { title: [{ text: { content: extracted.titulo } }] };
+      for (const [name, c] of Object.entries(cfg)) {
+        if (!c || !props[name]) continue;              // campo desactivado o inexistente
+        const type = props[name].type;
 
-      const historiaProp = findProp(['historia', 'story', 'contenido', 'content'], 'rich_text');
-      if (historiaProp)
-        pageProps[historiaProp[0]] = { rich_text: [{ text: { content: content.slice(0, 2000) } }] };
+        // Valor manual/fijo (select, status, date, o texto fijo)
+        const manual = c.mode === 'value' ? c.value : undefined;
+        // Valor extraído por Claude, o el texto crudo si es el campo de la historia
+        const auto = c.mode === 'extract'
+          ? (isStoryField(name) ? content : extracted[name])
+          : undefined;
+        const val = manual !== undefined && manual !== '' ? manual : auto;
 
-      const promptProp = findProp(['prompt de imagen', 'prompt imagen', 'imagen prompt', 'image prompt', 'prompt'], 'rich_text');
-      if (promptProp && extracted.prompt_imagen)
-        pageProps[promptProp[0]] = { rich_text: [{ text: { content: extracted.prompt_imagen } }] };
+        if (val === undefined || val === null || val === '') continue;
 
-      const estadoProp = findProp(['estado', 'status'], 'select');
-      if (estadoProp)
-        pageProps[estadoProp[0]] = { select: { name: 'Revisión' } };
-
-      const oficioRich = findProp(['oficio', 'profesión', 'ocupacion'], 'rich_text');
-      const oficioSel  = findProp(['oficio', 'profesión', 'ocupacion'], 'select');
-      if (oficioRich && extracted.oficio)
-        pageProps[oficioRich[0]] = { rich_text: [{ text: { content: extracted.oficio } }] };
-      else if (oficioSel && extracted.oficio)
-        pageProps[oficioSel[0]] = { select: { name: extracted.oficio } };
-
-      const anioNum  = findProp(['año', 'anio', 'year'], 'number');
-      const anioRich = findProp(['año', 'anio', 'year'], 'rich_text');
-      if (anioNum && extracted.anio) {
-        const n = parseInt(extracted.anio);
-        if (!isNaN(n)) pageProps[anioNum[0]] = { number: n };
-      } else if (anioRich && extracted.anio) {
-        pageProps[anioRich[0]] = { rich_text: [{ text: { content: String(extracted.anio) } }] };
+        switch (type) {
+          case 'title':
+            pageProps[name] = { title: [{ text: { content: String(val).slice(0, 2000) } }] };
+            break;
+          case 'rich_text':
+            pageProps[name] = { rich_text: [{ text: { content: String(val).slice(0, 2000) } }] };
+            break;
+          case 'number': {
+            const n = parseFloat(String(val).replace(/[^\d.-]/g, ''));
+            if (!isNaN(n)) pageProps[name] = { number: n };
+            break;
+          }
+          case 'select':
+            pageProps[name] = { select: { name: String(val) } };
+            break;
+          case 'status':
+            pageProps[name] = { status: { name: String(val) } };
+            break;
+          case 'multi_select':
+            pageProps[name] = { multi_select: (Array.isArray(val) ? val : [val]).map(v => ({ name: String(v) })) };
+            break;
+          case 'date':
+            pageProps[name] = { date: { start: String(val) } };
+            break;
+          // 'files' y otros tipos no soportados: se omiten
+        }
       }
-
-      const lugarRich = findProp(['lugar', 'location', 'locación', 'place'], 'rich_text');
-      const lugarSel  = findProp(['lugar', 'location', 'locación', 'place'], 'select');
-      if (lugarRich && extracted.lugar)
-        pageProps[lugarRich[0]] = { rich_text: [{ text: { content: extracted.lugar } }] };
-      else if (lugarSel && extracted.lugar)
-        pageProps[lugarSel[0]] = { select: { name: extracted.lugar } };
-
-      const sopaRich = findProp(['sopa', 'soup'], 'rich_text');
-      const sopaSel  = findProp(['sopa', 'soup'], 'select');
-      if (sopaRich && extracted.sopa)
-        pageProps[sopaRich[0]] = { rich_text: [{ text: { content: extracted.sopa } }] };
-      else if (sopaSel && extracted.sopa)
-        pageProps[sopaSel[0]] = { select: { name: extracted.sopa } };
 
       const children = [];
       for (let i = 0; i < content.length; i += 2000) {

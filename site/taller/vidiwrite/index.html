@@ -450,6 +450,58 @@ body {
   font-style: italic;
 }
 
+/* ── Campos dinámicos de la DB de Notion ── */
+#db-fields { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.dbfield {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--parch2);
+}
+.dbfield.on { border-color: var(--green); background: var(--highlight); }
+.dbfield input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; flex: none; }
+.dbfield .dbf-name {
+  font-family: var(--mono);
+  font-size: 0.74rem;
+  color: var(--ink);
+  flex: 1;
+  cursor: pointer;
+}
+.dbfield .dbf-type {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--sepia2);
+  opacity: 0.7;
+  flex: none;
+}
+.dbfield .dbf-control {
+  flex: none;
+  min-width: 140px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 5px 8px;
+  border: 1.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--highlight);
+  color: var(--ink);
+  outline: none;
+}
+.dbfield .dbf-auto {
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  font-style: italic;
+  color: var(--sepia);
+  opacity: 0.8;
+  flex: none;
+  min-width: 140px;
+  text-align: right;
+}
+
 .save-settings-btn {
   font-family: var(--mono);
   font-size: 0.72rem;
@@ -584,9 +636,9 @@ body {
       <div class="setting-group">
         <label>Modelo</label>
         <select id="cfg-model">
-          <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (recomendado)</option>
-          <option value="claude-opus-4-20250514">Claude Opus 4</option>
-          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rápido)</option>
+          <option value="claude-sonnet-5">Claude Sonnet 5 (recomendado)</option>
+          <option value="claude-opus-4-8">Claude Opus 4.8 (más capaz)</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 (rápido)</option>
         </select>
       </div>
       <div class="setting-group">
@@ -617,6 +669,16 @@ body {
       </div>
       <p class="setting-note">El título de la historia se usará como nombre de página en Notion. El contenido se sube como cuerpo de la página.</p>
 
+      <div class="setting-divider"></div>
+
+      <div class="setting-row">
+        <div class="setting-group" style="flex:1">
+          <label>Campos de la base de datos</label>
+          <p class="setting-note" style="margin-top:0">Activa los campos que quieras llenar al subir. Los de texto los extrae Claude de la historia; los de opciones/fecha los eliges manualmente.</p>
+        </div>
+        <button class="inline-btn" onclick="loadDbFields()">Cargar campos</button>
+      </div>
+      <div id="db-fields"></div>
 
       <div class="setting-divider"></div>
 
@@ -635,8 +697,20 @@ const state = {
 };
 
 // ── LOAD SETTINGS ───────────────────────────────────────
-function loadSettings() {
+async function loadSettings() {
   const s = JSON.parse(localStorage.getItem('sf_settings') || '{}');
+
+  // Rellena desde variables de ambiente (.env / Netlify) si no hay valor local
+  try {
+    const resp = await fetch('/.netlify/functions/config');
+    if (resp.ok) {
+      const env = await resp.json();
+      if (!s.apikey      && env.claudeApiKey) s.apikey      = env.claudeApiKey;
+      if (!s.notionToken && env.notionToken)  s.notionToken = env.notionToken;
+      if (!s.notionDb    && env.notionDB)     s.notionDb    = env.notionDB;
+    }
+  } catch (_) { /* sin backend (p.ej. abierto como archivo): usa solo localStorage */ }
+
   state.settings = s;
   if (s.apikey)      document.getElementById('cfg-apikey').value = s.apikey;
   if (s.model)       document.getElementById('cfg-model').value = s.model;
@@ -644,6 +718,9 @@ function loadSettings() {
   if (s.notionToken) document.getElementById('cfg-notion-token').value = s.notionToken;
   if (s.notionDb)    document.getElementById('cfg-notion-db').value = s.notionDb;
   if (s.notionTags)  document.getElementById('cfg-notion-tags').value = s.notionTags;
+
+  // Si ya hay campos guardados, píntalos (schema cacheado + config)
+  if (s.dbSchema && s.dbSchema.length) renderDbFields(s.dbSchema, s.fieldConfig || {});
 }
 
 function saveSettings() {
@@ -653,11 +730,31 @@ function saveSettings() {
     count:       document.getElementById('cfg-count').value,
     notionToken: document.getElementById('cfg-notion-token').value.trim(),
     notionDb:    document.getElementById('cfg-notion-db').value.trim(),
-    notionTags:  document.getElementById('cfg-notion-tags').value.trim()
+    notionTags:  document.getElementById('cfg-notion-tags').value.trim(),
+    dbSchema:    state.settings.dbSchema || [],
+    fieldConfig: collectFieldConfig()
   };
   localStorage.setItem('sf_settings', JSON.stringify(s));
   state.settings = s;
   setStatus('ok', '✓ Configuración guardada');
+}
+
+// Lee el estado actual de los checkboxes/controles de campos → { nombre: { mode, value } }
+function collectFieldConfig() {
+  const cfg = {};
+  document.querySelectorAll('#db-fields .dbfield').forEach(row => {
+    const name = row.dataset.name;
+    const on   = row.querySelector('input[type="checkbox"]').checked;
+    if (!on) return;
+    const mode = row.dataset.mode; // 'extract' o 'value'
+    if (mode === 'value') {
+      const ctrl = row.querySelector('.dbf-control');
+      cfg[name] = { mode: 'value', value: ctrl ? ctrl.value : '' };
+    } else {
+      cfg[name] = { mode: 'extract' };
+    }
+  });
+  return cfg;
 }
 
 // ── TABS ────────────────────────────────────────────────
@@ -747,7 +844,7 @@ function createSlotCard(slot) {
 
 async function fetchSuggestions(slot, card, fullText) {
   const count = state.settings.count || 5;
-  const model = state.settings.model || 'claude-sonnet-4-20250514';
+  const model = state.settings.model || 'claude-sonnet-5';
 
   const system = `Eres un asistente de escritura creativa especializado en sugerencias históricamente precisas y narrativamente ricas. Responde SOLO con JSON válido, sin texto extra ni backticks.`;
 
@@ -830,7 +927,7 @@ async function buildFinal() {
   box.className = '';
   box.value = '✦ Integrando con IA…';
 
-  const model = state.settings.model || 'claude-sonnet-4-20250514';
+  const model = state.settings.model || 'claude-sonnet-5';
 
   const prompt = `Tienes esta historia con las opciones ya integradas. Pule ligeramente el texto para que fluya de forma natural, sin cambiar el contenido ni agregar información nueva. Mantén el tono, época y estilo del autor. Devuelve solo la historia final, sin comentarios.
 
@@ -881,6 +978,17 @@ async function publishToNotion() {
     return;
   }
 
+  // Usa la selección actual si hay campos pintados; si no, la guardada
+  const fieldConfig = document.querySelector('#db-fields .dbfield')
+    ? collectFieldConfig()
+    : (state.settings.fieldConfig || {});
+
+  if (!Object.keys(fieldConfig).length) {
+    setStatus('error', '⚠ No hay campos activados. Ve a Config → Cargar campos y marca los que quieras llenar');
+    switchTab('settings');
+    return;
+  }
+
   setStatus('', '↑ Analizando historia y subiendo a Notion…');
 
   try {
@@ -892,7 +1000,8 @@ async function publishToNotion() {
         databaseId: notionDb,
         content,
         apiKey: apikey,
-        model: model || 'claude-sonnet-4-20250514'
+        model: model || 'claude-sonnet-5',
+        fieldConfig
       })
     });
     const data = await resp.json();
@@ -922,6 +1031,107 @@ async function testNotion() {
   } catch (e) {
     setStatus('error', `✕ ${e.message}`);
   }
+}
+
+// Tipos de campo que Claude puede extraer de la historia
+const EXTRACTABLE_TYPES = ['title', 'rich_text', 'number'];
+const STORY_RE = /^(historia|contenido|story|content)$/i;
+
+// Consulta el esquema de la DB y pinta la lista de campos
+async function loadDbFields() {
+  const token = document.getElementById('cfg-notion-token').value.trim();
+  const dbId  = document.getElementById('cfg-notion-db').value.trim();
+  if (!token || !dbId) { setStatus('error', '⚠ Ingresa Token y Database ID primero'); return; }
+  setStatus('', 'Cargando campos de la base de datos…');
+  try {
+    const resp = await fetch('/.netlify/functions/notion/schema', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ notionToken: token, databaseId: dbId })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    state.settings.dbSchema = data.fields;
+    renderDbFields(data.fields, state.settings.fieldConfig || {});
+    setStatus('ok', `✓ ${data.fields.length} campos cargados${data.dbTitle ? ' de ' + data.dbTitle : ''}`);
+  } catch (e) {
+    setStatus('error', `✕ ${e.message}`);
+  }
+}
+
+// Pinta la lista de campos con checkbox + control según el tipo
+function renderDbFields(fields, cfg) {
+  const box = document.getElementById('db-fields');
+  box.innerHTML = '';
+  fields.forEach(f => {
+    const saved   = cfg[f.name];
+    const on      = !!saved;
+    const isOpt   = ['select', 'status', 'multi_select'].includes(f.type);
+    const isDate  = f.type === 'date';
+    const canExtract = EXTRACTABLE_TYPES.includes(f.type);
+    const isStory = STORY_RE.test(f.name.trim());
+    const manual  = isOpt || isDate;           // se llena a mano
+    const usable  = manual || canExtract;      // 'files' u otros no soportados
+    const mode    = manual ? 'value' : 'extract';
+
+    const row = document.createElement('div');
+    row.className = 'dbfield' + (on ? ' on' : '');
+    row.dataset.name = f.name;
+    row.dataset.mode = mode;
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = on;
+    cb.disabled = !usable;
+    cb.onchange = () => row.classList.toggle('on', cb.checked);
+
+    const nameEl = document.createElement('span');
+    nameEl.className = 'dbf-name';
+    nameEl.textContent = f.name;
+    nameEl.onclick = () => { if (usable) { cb.checked = !cb.checked; cb.onchange(); } };
+
+    const typeEl = document.createElement('span');
+    typeEl.className = 'dbf-type';
+    typeEl.textContent = f.type;
+
+    row.appendChild(cb);
+    row.appendChild(nameEl);
+    row.appendChild(typeEl);
+
+    if (!usable) {
+      const note = document.createElement('span');
+      note.className = 'dbf-auto';
+      note.textContent = 'no soportado';
+      row.appendChild(note);
+    } else if (manual) {
+      let ctrl;
+      if (isOpt) {
+        ctrl = document.createElement('select');
+        ctrl.className = 'dbf-control';
+        const empty = document.createElement('option');
+        empty.value = ''; empty.textContent = '— elegir —';
+        ctrl.appendChild(empty);
+        (f.options || []).forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o; opt.textContent = o;
+          ctrl.appendChild(opt);
+        });
+      } else { // date
+        ctrl = document.createElement('input');
+        ctrl.type = 'date';
+        ctrl.className = 'dbf-control';
+      }
+      if (saved && saved.mode === 'value' && saved.value) ctrl.value = saved.value;
+      row.appendChild(ctrl);
+    } else {
+      const note = document.createElement('span');
+      note.className = 'dbf-auto';
+      note.textContent = isStory ? 'texto completo' : 'lo extrae Claude';
+      row.appendChild(note);
+    }
+
+    box.appendChild(row);
+  });
 }
 
 // ── UTILS ───────────────────────────────────────────────

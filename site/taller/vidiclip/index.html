@@ -1911,44 +1911,70 @@ if (getCfg('notionToken') && getCfg('notionDB')) {
 startRenderLoop();
 renderBg();
 
+// ════ AUTOCONFIG DESDE .env (via Netlify Function) ════
+(async function autoconfigEnv() {
+  try {
+    const res = await fetch('/.netlify/functions/config');
+    if (!res.ok) return;
+    const { notionToken, notionDB } = await res.json();
+    if (notionToken && !getCfg('notionToken')) setCfg('notionToken', notionToken);
+    if (notionDB    && !getCfg('notionDB'))    setCfg('notionDB', notionDB);
+    if (notionToken && notionDB) {
+      console.log('[autoconfig] Notion config precargada desde .env');
+      setNotionStatus('ok', 'Configurado — presiona "Cargar Notion"');
+    }
+  } catch (e) {
+    // Silencioso: si no hay función config o falla, el usuario puede configurar manualmente
+  }
+})();
+
 // ════ AUTOLOAD ASSETS ════
 async function autoloadAssets() {
-  // Autoload solo funciona en local con el servidor de assets corriendo
-  console.log('Autoload: desactivado en producción');
-  return;
+  // Autocarga los archivos de la carpeta files/ — personaje.mp4 y musica.MP3
+  // Construye la URL base relativa a la ubicación de esta página
+  const base = window.location.pathname.replace(/\/$/, '').replace(/\/index\.html$/, '') + '/files/';
+  // Si se abrió desde file://, usamos ruta relativa simple
+  const useAbs = window.location.protocol !== 'file:';
+  const videoURL = useAbs ? base + 'personaje.mp4' : 'files/personaje.mp4';
 
-  // Video — set src directly to server URL so browser streams it (no full-blob download)
+  // Video — carga personaje.mp4
   try {
-    const check = await fetch(`${BASE}/asset?file=personaje.mp4`, { method: 'HEAD' });
+    const check = await fetch(videoURL);
     if (check.ok) {
-      charVideo.src = `${BASE}/asset?file=personaje.mp4`;
+      charVideo.src = videoURL;
       charVideo.load();
-      charVideo.play().catch(() => {});
+      await charVideo.play().catch(() => {});
       APP.charLoaded = true;
       document.getElementById('charLoaded').classList.add('v');
       document.getElementById('charName').textContent = 'personaje.mp4';
       document.getElementById('canvasPh').style.display = 'none';
       startRenderLoop();
+      console.log('Autoload: personaje.mp4 cargado ✓ desde', videoURL);
+    } else {
+      console.warn('Autoload video: HTTP', check.status);
     }
   } catch(e) { console.warn('Autoload video failed:', e); }
 
-  // Audio — try both lowercase and uppercase extension
-  const audioFiles = ['musica.mp3', 'musica.MP3', 'musica.m4a', 'musica.aac', 'musica.wav'];
-  for (const filename of audioFiles) {
+  // Audio — carga musica.MP3
+  const audioNames = useAbs
+    ? [base + 'musica.MP3', base + 'musica.mp3']
+    : ['files/musica.MP3', 'files/musica.mp3'];
+  for (const audioURL of audioNames) {
     try {
-      const check = await fetch(`${BASE}/asset?file=${filename}`, { method: 'HEAD' });
-      if (!check.ok) continue;
-      const buf = await (await fetch(`${BASE}/asset?file=${filename}`)).arrayBuffer();
+      const res = await fetch(audioURL);
+      if (!res.ok) { console.warn('Autoload audio: HTTP', res.status, audioURL); continue; }
+      const buf = await res.arrayBuffer();
       APP.musicBuffer = buf;
-      const blob = new Blob([buf], { type: check.headers.get('content-type') || 'audio/mpeg' });
+      const blob = new Blob([buf], { type: res.headers.get('content-type') || 'audio/mpeg' });
       bgAudio.src = URL.createObjectURL(blob);
       bgAudio.load();
       APP.musicLoaded = true;
       document.getElementById('musicLoaded').classList.add('v');
-      document.getElementById('musicName').textContent = filename;
+      document.getElementById('musicName').textContent = audioURL.split('/').pop();
       bgAudio.play().catch(() => {});
+      console.log(`Autoload: musica cargada ✓ desde`, audioURL);
       break;
-    } catch(e) { console.warn(`Autoload audio ${filename} failed:`, e); }
+    } catch(e) { console.warn(`Autoload audio ${audioURL} failed:`, e); }
   }
 }
 setTimeout(autoloadAssets, 600);
