@@ -1,6 +1,7 @@
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
+const http  = require('http');
+const https = require('https');
+const fs    = require('fs');
+const path  = require('path');
 
 const PORT = 4000;
 const ROOT = __dirname;
@@ -9,6 +10,7 @@ const ROOT = __dirname;
 let TALLER_PASSWORD = 'admin';
 let NOTION_DB_ID = '';
 let NOTION_TOKEN = '';
+let NEWSLETTER_DB_ID = '';
 
 try {
   const envPath = path.join(__dirname, '..', '.env');
@@ -23,7 +25,10 @@ try {
   const tokenMatch = envContent.match(/^integration_token\s*=\s*(.+)$/m);
   if (tokenMatch) NOTION_TOKEN = tokenMatch[1].trim();
 
-  console.log(`[env] taller=*** db_id=${NOTION_DB_ID ? '✓' : '✗'} integration_token=${NOTION_TOKEN ? '✓' : '✗'}`);
+  const newsletterMatch = envContent.match(/^newsletter_db_id\s*=\s*(.+)$/m);
+  if (newsletterMatch) NEWSLETTER_DB_ID = newsletterMatch[1].trim();
+
+  console.log(`[env] taller=*** db_id=${NOTION_DB_ID ? '✓' : '✗'} integration_token=${NOTION_TOKEN ? '✓' : '✗'} newsletter_db_id=${NEWSLETTER_DB_ID ? '✓' : '✗'}`);
 } catch (e) {
   console.log('[!] No se pudo leer .env, usando valores por defecto');
 }
@@ -109,6 +114,18 @@ http.createServer((req, res) => {
   // ── /taller/* (herramientas) → acceso libre una vez dentro ──
   if (urlPath.startsWith('/taller/')) {
     handleTallerRoute(urlPath, req, res);
+    return;
+  }
+
+  // ── /.netlify/functions/historias → historias "Programado" desde Notion ──
+  if (urlPath === '/.netlify/functions/historias') {
+    handleHistorias(req, res);
+    return;
+  }
+
+  // ── /.netlify/functions/newsletter → alta de suscriptores en Notion ──
+  if (urlPath === '/.netlify/functions/newsletter') {
+    handleNewsletter(req, res);
     return;
   }
 
@@ -209,6 +226,193 @@ function serveFile(filePath, res) {
   });
 
   fs.createReadStream(filePath).pipe(res);
+}
+
+// ── Notion helpers para /historias ──
+function notionRequest(reqPath, body) {
+  return new Promise((resolve, reject) => {
+    const bodyStr = body ? JSON.stringify(body) : '';
+    const headers = {
+      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json',
+    };
+    if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);
+
+    const apiReq = https.request({
+      hostname: 'api.notion.com',
+      path: reqPath,
+      method: body ? 'POST' : 'GET',
+      headers,
+    }, (apiRes) => {
+      const chunks = [];
+      apiRes.on('data', d => chunks.push(d));
+      apiRes.on('end', () => {
+        try {
+          resolve({ status: apiRes.statusCode, data: JSON.parse(Buffer.concat(chunks).toString()) });
+        } catch (e) {
+          reject(e);
+        }
+      });
+    });
+    apiReq.on('error', reject);
+    if (bodyStr) apiReq.write(bodyStr);
+    apiReq.end();
+  });
+}
+
+function formatDbId(raw) {
+  const id = raw.replace(/-/g, '');
+  return id.length === 32
+    ? `${id.slice(0,8)}-${id.slice(8,12)}-${id.slice(12,16)}-${id.slice(16,20)}-${id.slice(20)}`
+    : raw;
+}
+
+function getTitle(prop) { return prop?.title?.map(t => t.plain_text).join('') || ''; }
+function getRichText(prop) { return prop?.rich_text?.map(t => t.plain_text).join('') || ''; }
+function getFileUrl(prop) {
+  const files = prop?.files;
+  if (!files || files.length === 0) return null;
+  const f = files[0];
+  return f.type === 'external' ? f.external?.url : f.file?.url || null;
+}
+
+function parseHistoriaPage(page) {
+  const p = page.properties;
+  return {
+    id: page.id,
+    titulo: getTitle(p['Titulo']),
+    historia: getRichText(p['Historia']),
+    oficio: getRichText(p['Oficio']),
+    lugar: getRichText(p['Lugar']),
+    detalles: getRichText(p['Detalles']),
+    sopa: getRichText(p['Sopa']),
+    anio: p['Año']?.number ?? null,
+    categoria: p['Category']?.select?.name || '',
+    imagenUrl: getFileUrl(p['Imagen']),
+  };
+}
+
+async function handleHistorias(req, res) {
+  if (!NOTION_DB_ID || !NOTION_TOKEN) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Faltan credenciales de Notion en el servidor' }));
+    return;
+  }
+
+  const qs = new URL(req.url, 'http://localhost').searchParams;
+  const dbId = formatDbId(NOTION_DB_ID);
+
+  try {
+    const results = [];
+    let cursor;
+    do {
+      const { status, data } = await notionRequest(`/v1/databases/${dbId}/query`, {
+        filter: { property: 'Estado', status: { equals: 'Programado' } },
+        sorts: [{ property: 'Fecha de Publicacion', direction: 'descending' }],
+        ...(cursor ? { start_cursor: cursor } : {}),
+      });
+      if (status !== 200) throw new Error(data.message || `HTTP ${status}`);
+      results.push(...data.results);
+      cursor = data.has_more ? data.next_cursor : undefined;
+    } while (cursor);
+
+    const historias = results.map(parseHistoriaPage);
+
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+
+    if (qs.get('random') === 'true') {
+      if (historias.length === 0) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'No hay historias programadas' }));
+        return;
+      }
+      const pick = historias[Math.floor(Math.random() * historias.length)];
+      res.end(JSON.stringify(pick));
+      return;
+    }
+
+    res.end(JSON.stringify({ historias }));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// ── /newsletter: alta de suscriptores ──
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const VALID_ORIGENES = ['historias.html', 'index.html', 'otro'];
+
+function readRequestBody(req) {
+  return new Promise((resolve, reject) => {
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', () => resolve(data));
+    req.on('error', reject);
+  });
+}
+
+async function handleNewsletter(req, res) {
+  if (req.method !== 'POST') {
+    res.writeHead(405); res.end('Method Not Allowed'); return;
+  }
+
+  if (!NEWSLETTER_DB_ID || !NOTION_TOKEN) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Faltan credenciales de Notion en el servidor' }));
+    return;
+  }
+
+  let body;
+  try {
+    body = JSON.parse(await readRequestBody(req));
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'JSON inválido' }));
+    return;
+  }
+
+  const email  = String(body.email || '').trim().toLowerCase();
+  const nombre = String(body.nombre || '').trim().slice(0, 200);
+  const origen = VALID_ORIGENES.includes(body.origen) ? body.origen : 'otro';
+
+  if (!EMAIL_RE.test(email)) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Email inválido' }));
+    return;
+  }
+
+  const dbId = formatDbId(NEWSLETTER_DB_ID);
+
+  try {
+    const { status: qStatus, data: qData } = await notionRequest(`/v1/databases/${dbId}/query`, {
+      filter: { property: 'Email', title: { equals: email } },
+      page_size: 1,
+    });
+    if (qStatus !== 200) throw new Error(qData.message || `HTTP ${qStatus}`);
+
+    if (qData.results.length > 0) {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true, alreadySubscribed: true }));
+      return;
+    }
+
+    const { status: cStatus, data: cData } = await notionRequest('/v1/pages', {
+      parent: { database_id: dbId },
+      properties: {
+        Email:  { title: [{ text: { content: email } }] },
+        Nombre: nombre ? { rich_text: [{ text: { content: nombre } }] } : { rich_text: [] },
+        Origen: { select: { name: origen } },
+      },
+    });
+    if (cStatus !== 200) throw new Error(cData.message || `HTTP ${cStatus}`);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true, alreadySubscribed: false }));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
+  }
 }
 
 // ── Servir Vidiclip con variables de entorno inyectadas ──

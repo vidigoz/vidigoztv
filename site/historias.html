@@ -3,95 +3,257 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tempoverso</title>
+<title>Historias — Tempoverso</title>
 <link rel="stylesheet" href="styles/main.css">
+<style>
+  /* ── HISTORIAS ── */
+  .hist-toolbar {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 40px 32px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .hist-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .hist-filter label {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    font-weight: 400;
+  }
+
+  .hist-filter select {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 13px;
+    padding: 8px 12px;
+    border-radius: 2px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .hist-filter select:hover,
+  .hist-filter select:focus {
+    border-color: var(--border2);
+  }
+
+  .hist-spacer { flex: 1; }
+
+  .hist-btn {
+    background: var(--bg2);
+    border: 1px solid var(--gold-dim);
+    color: var(--gold);
+    font-family: var(--sans);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 10px 20px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .hist-btn:hover {
+    background: var(--gold-faint);
+    border-color: var(--gold);
+  }
+
+  .hist-btn:active { transform: translateY(1px); }
+
+  .hist-count {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 40px 24px;
+    font-size: 12px;
+    color: var(--text2);
+    letter-spacing: 0.5px;
+  }
+
+  /* ── STORY CARD ── */
+  .story-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 40px 44px;
+    margin-bottom: 28px;
+    transition: border-color 0.2s;
+  }
+
+  .story-card:hover { border-color: var(--border2); }
+
+  .story-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 18px;
+  }
+
+  .story-tag {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold);
+    border: 1px solid var(--border2);
+    padding: 4px 10px;
+    border-radius: 2px;
+  }
+
+  .story-title {
+    font-family: var(--serif);
+    font-size: 30px;
+    font-style: italic;
+    color: var(--text-bright);
+    font-weight: 400;
+    line-height: 1.25;
+    margin-bottom: 20px;
+  }
+
+  .story-meta-line {
+    font-size: 12px;
+    color: var(--text2);
+    font-style: italic;
+    margin-bottom: 24px;
+  }
+
+  .story-text {
+    font-family: var(--serif);
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.85;
+    white-space: pre-line;
+    margin-bottom: 28px;
+  }
+
+  .story-image-wrap {
+    margin-top: 8px;
+  }
+
+  .story-image {
+    width: 100%;
+    max-width: 360px;
+    aspect-ratio: 9 / 16;
+    object-fit: cover;
+    border-radius: 2px;
+    border: 1px solid var(--border);
+    display: block;
+    margin: 0 auto;
+  }
+
+  .story-image-caption {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-top: 10px;
+  }
+
+  .story-sopa {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text2);
+    font-style: italic;
+  }
+
+  .story-sopa strong {
+    color: var(--gold);
+    font-style: normal;
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-size: 10px;
+    margin-right: 8px;
+  }
+
+  /* ── LOADING / ERROR ── */
+  .hist-loading, .hist-error {
+    text-align: center;
+    padding: 80px 40px;
+    color: var(--text2);
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 16px;
+  }
+
+  .hist-error { color: var(--danger); }
+
+  @media (max-width: 700px) {
+    .hist-toolbar { padding: 0 24px 28px; gap: 10px; }
+    .hist-count { padding: 0 24px 20px; }
+    .story-card { padding: 28px 24px; }
+    .story-title { font-size: 24px; }
+    .story-text { font-size: 15.5px; }
+  }
+</style>
 </head>
 <body>
 
 <nav class="topnav">
-  <div class="topnav-brand">
-    <span>Tempoverso</span>
-    El Hilado
-  </div>
+  <div class="topnav-brand">Tempoverso → Historias</div>
   <ul class="topnav-links">
-    <li><a href="#escritos">Escritos</a></li>
-    <li><a href="#videos">Videos</a></li>
-    <li><a href="#musica">Música</a></li>
-    <li><a href="lore.html">El Lore</a></li>
+    <li><a href="index.html">Inicio</a></li>
+    <li><a href="historias.html" class="active">Historias</a></li>
   </ul>
 </nav>
 
 <div class="page">
 
   <!-- HERO -->
-  <section class="hero">
-    <div class="hero-mark fade-up">El universo que se escribe mientras se vive</div>
-    <h1 class="hero-title fade-up-2">Tempoverso</h1>
+  <section class="hero" style="min-height:auto;padding:80px 40px 48px;">
+    <h1 class="hero-title fade-up-2" style="font-size:clamp(40px,6vw,72px);">Historias Medievales</h1>
     <p class="hero-sub fade-up-3">
-      Historias, imágenes y sonidos del Hilado. Todo lo que aquí vive fue escrito,
-      o es una grieta.
+      Relatos de la cotidianidad medieval, oficios, dramas y personajes de ficción medieval.
     </p>
-    <div class="hero-divider fade-up-3"></div>
   </section>
 
-  <!-- LORE BANNER -->
-  <div style="max-width:900px;margin:0 auto;padding:0 40px 80px;">
-    <div class="lore-banner">
-      <p>"El pasado no es lo que fue. Es lo que recordamos que fue. Y lo que recordamos lo construimos en cada recuerdo."</p>
-      <span class="attribution">Principio del Tempoverso — <a href="lore.html" style="color:var(--gold);border-bottom:1px solid var(--border2);">Leer El Libro del Origen</a></span>
+  <hr class="section-rule">
+
+  <!-- TOOLBAR -->
+  <div class="hist-toolbar">
+    <div class="hist-filter">
+      <label for="filterCategoria">Categoría</label>
+      <select id="filterCategoria">
+        <option value="">Todas</option>
+      </select>
     </div>
+    <div class="hist-filter">
+      <label for="filterAnio">Año</label>
+      <select id="filterAnio">
+        <option value="">Todos</option>
+      </select>
+    </div>
+    <div class="hist-filter">
+      <label for="filterSopa">Sopa</label>
+      <select id="filterSopa">
+        <option value="">Todas</option>
+      </select>
+    </div>
+    <div class="hist-spacer"></div>
+    <button class="hist-btn" id="btnRandom">✦ Historia aleatoria</button>
+    <button class="hist-btn" id="btnReset" style="display:none;">Ver todas</button>
   </div>
 
-  <!-- ESCRITOS -->
-  <section id="escritos">
-    <hr class="section-rule">
-    <div class="section-header">
-      <div class="section-header-mark">// Escritos</div>
-      <h2>El Hilado en palabras</h2>
-      <p>Mini historias, redacciones, libros. Cada texto es un hilo en el tejido.</p>
-    </div>
-    <div class="content-grid" id="escritos-grid">
-      <div class="empty-state">
-        <div class="empty-state-title">Aún no hay escritos publicados</div>
-        <p>Los primeros textos del Hilado aparecerán aquí</p>
-      </div>
-    </div>
-  </section>
+  <div class="hist-count" id="histCount"></div>
 
-  <div class="ornament">· · ·</div>
-
-  <!-- VIDEOS -->
-  <section id="videos">
-    <hr class="section-rule">
-    <div class="section-header">
-      <div class="section-header-mark">// Videos</div>
-      <h2>El Hilado en movimiento</h2>
-      <p>Historias visuales del universo Tempoverso.</p>
+  <!-- STORIES -->
+  <section id="historias">
+    <div class="content-grid" id="historias-grid" style="padding-top:0;">
+      <div class="hist-loading" id="histLoading">Desenredando el Hilado…</div>
     </div>
-    <div class="content-grid" id="videos-grid">
-      <div class="empty-state">
-        <div class="empty-state-title">Aún no hay videos publicados</div>
-        <p>Las primeras imágenes del Hilado aparecerán aquí</p>
-      </div>
-    </div>
-  </section>
-
-  <div class="ornament">· · ·</div>
-
-  <!-- MÚSICA -->
-  <section id="musica">
-    <hr class="section-rule">
-    <div class="section-header">
-      <div class="section-header-mark">// Música</div>
-      <h2>El Hilado en sonido</h2>
-      <p>El eco de la pregunta que inició todo.</p>
-    </div>
-    <div class="content-grid" id="musica-grid">
-      <div class="empty-state">
-        <div class="empty-state-title">Aún no hay música publicada</div>
-        <p>Los primeros sonidos del Hilado aparecerán aquí</p>
-      </div>
-    </div>
+    <div id="scrollSentinel" style="height:1px;"></div>
   </section>
 
   <div class="ornament">· · ·</div>
@@ -104,19 +266,211 @@
 </div>
 
 <script>
-  // Marca el link activo según la sección visible
-  const links = document.querySelectorAll('.topnav-links a[href^="#"]');
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        links.forEach(l => l.classList.remove('active'));
-        const active = document.querySelector(`.topnav-links a[href="#${e.target.id}"]`);
-        if (active) active.classList.add('active');
-      }
-    });
-  }, { rootMargin: '-40% 0px -55% 0px' });
+const API_URL = '/.netlify/functions/historias';
 
-  document.querySelectorAll('section[id]').forEach(s => observer.observe(s));
+const PAGE_SIZE = 8;
+
+const state = {
+  all: [],
+  filtered: [],
+  filterCategoria: '',
+  filterAnio: '',
+  filterSopa: '',
+  singleView: null, // historia individual mostrada por "aleatoria"
+  visibleCount: PAGE_SIZE, // cuántas de "filtered" están renderizadas (scroll infinito)
+};
+
+const grid           = document.getElementById('historias-grid');
+const histCount      = document.getElementById('histCount');
+const selCat         = document.getElementById('filterCategoria');
+const selAnio        = document.getElementById('filterAnio');
+const selSopa        = document.getElementById('filterSopa');
+const btnRandom      = document.getElementById('btnRandom');
+const btnReset       = document.getElementById('btnReset');
+const scrollSentinel = document.getElementById('scrollSentinel');
+
+const infiniteScrollObserver = new IntersectionObserver(entries => {
+  if (entries.some(e => e.isIntersecting)) loadMore();
+}, { rootMargin: '400px 0px' });
+infiniteScrollObserver.observe(scrollSentinel);
+
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+// Extrae el ingrediente principal de un texto de "Sopa", p.ej.
+// "sopa de tuétano de topo con ajo rostizado" → "tuétano de topo"
+function ingredientePrincipal(sopa) {
+  if (!sopa) return '';
+  let s = sopa.trim().toLowerCase();
+  if (!s || /^ninguna\b/.test(s)) return '';
+
+  // quita el prefijo "sopa (negra|roja|...) de "
+  s = s.replace(/^sopa(\s+\w+)?\s+de\s+/, '');
+
+  // corta en el primer "con"/"y", coma o punto — deja solo el ingrediente principal
+  s = s.split(/\s+con\s+|\s+y\s+|,|\./)[0].trim();
+
+  return s;
+}
+
+function renderStoryCard(s) {
+  const tags = [];
+  if (s.categoria) tags.push(s.categoria);
+  if (s.anio != null) tags.push(`Año ${s.anio}`);
+
+  const metaParts = [];
+  if (s.oficio) metaParts.push(s.oficio);
+  if (s.lugar) metaParts.push(s.lugar);
+
+  return `
+    <article class="story-card">
+      ${tags.length ? `<div class="story-tags">${tags.map(t => `<span class="story-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      <h2 class="story-title">${escapeHtml(s.titulo || 'Sin título')}</h2>
+      ${metaParts.length ? `<div class="story-meta-line">${escapeHtml(metaParts.join(' — '))}</div>` : ''}
+      <div class="story-text">${escapeHtml(s.historia || s.detalles || 'Esta historia aún no tiene texto.')}</div>
+      ${s.imagenUrl ? `
+        <div class="story-image-wrap">
+          <img class="story-image" src="${s.imagenUrl}" alt="${escapeHtml(s.titulo)}" loading="lazy">
+          <div class="story-image-caption">Imagen de referencia</div>
+        </div>
+      ` : ''}
+      ${s.sopa ? `<div class="story-sopa"><strong>Sopa</strong>${escapeHtml(s.sopa)}</div>` : ''}
+    </article>
+  `;
+}
+
+function renderGrid(list) {
+  if (list.length === 0) {
+    grid.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-title">No hay historias con estos filtros</div>
+        <p>Prueba con otra combinación de categoría, año o sopa</p>
+      </div>
+    `;
+    return;
+  }
+  const visible = list.slice(0, state.visibleCount);
+  grid.innerHTML = visible.map(renderStoryCard).join('');
+  updateSentinel(list);
+}
+
+function updateSentinel(list) {
+  scrollSentinel.style.display = state.visibleCount < list.length ? '' : 'none';
+}
+
+function loadMore() {
+  if (state.singleView) return;
+  if (state.visibleCount >= state.filtered.length) return;
+  state.visibleCount += PAGE_SIZE;
+  renderGrid(state.filtered);
+  updateCount(state.filtered);
+}
+
+function updateCount(list) {
+  if (state.singleView) {
+    histCount.textContent = 'Mostrando 1 historia aleatoria';
+    return;
+  }
+  const shown = Math.min(state.visibleCount, list.length);
+  histCount.textContent = `Mostrando ${shown} de ${list.length} historia${list.length === 1 ? '' : 's'} programada${list.length === 1 ? '' : 's'}`;
+}
+
+function applyFilters() {
+  state.singleView = null;
+  state.visibleCount = PAGE_SIZE;
+  btnReset.style.display = 'none';
+
+  state.filtered = state.all.filter(s => {
+    if (state.filterCategoria && s.categoria !== state.filterCategoria) return false;
+    if (state.filterAnio && String(s.anio) !== state.filterAnio) return false;
+    if (state.filterSopa && ingredientePrincipal(s.sopa) !== state.filterSopa) return false;
+    return true;
+  });
+
+  renderGrid(state.filtered);
+  updateCount(state.filtered);
+}
+
+function populateFilters(list) {
+  const categorias = [...new Set(list.map(s => s.categoria).filter(Boolean))].sort();
+  const anios = [...new Set(list.map(s => s.anio).filter(a => a != null))].sort((a, b) => a - b);
+  const sopas = [...new Set(list.map(s => ingredientePrincipal(s.sopa)).filter(Boolean))].sort();
+
+  selCat.innerHTML = '<option value="">Todas</option>' +
+    categorias.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+
+  selAnio.innerHTML = '<option value="">Todos</option>' +
+    anios.map(a => `<option value="${a}">${a}</option>`).join('');
+
+  selSopa.innerHTML = '<option value="">Todas</option>' +
+    sopas.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+}
+
+async function loadHistorias() {
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    state.all = data.historias || [];
+
+    if (state.all.length === 0) {
+      grid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-title">Aún no hay historias programadas</div>
+          <p>Cuando una historia pase a estado "Programado" en Notion, aparecerá aquí</p>
+        </div>
+      `;
+      histCount.textContent = '';
+      return;
+    }
+
+    populateFilters(state.all);
+    applyFilters();
+  } catch (err) {
+    console.error('Error cargando historias:', err);
+    grid.innerHTML = `<div class="hist-error">No se pudieron cargar las historias. Intenta recargar la página.</div>`;
+  }
+}
+
+async function loadRandom() {
+  btnRandom.disabled = true;
+  btnRandom.textContent = 'Buscando…';
+  try {
+    const res = await fetch(`${API_URL}?random=true`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const story = await res.json();
+    state.singleView = story;
+    btnReset.style.display = '';
+    renderGrid([story]);
+    updateCount([story]);
+    grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.error('Error cargando historia aleatoria:', err);
+  } finally {
+    btnRandom.disabled = false;
+    btnRandom.textContent = '✦ Historia aleatoria';
+  }
+}
+
+selCat.addEventListener('change', e => { state.filterCategoria = e.target.value; applyFilters(); });
+selAnio.addEventListener('change', e => { state.filterAnio = e.target.value; applyFilters(); });
+selSopa.addEventListener('change', e => { state.filterSopa = e.target.value; applyFilters(); });
+btnRandom.addEventListener('click', loadRandom);
+btnReset.addEventListener('click', () => {
+  selCat.value = '';
+  selAnio.value = '';
+  selSopa.value = '';
+  state.filterCategoria = '';
+  state.filterAnio = '';
+  state.filterSopa = '';
+  applyFilters();
+});
+
+loadHistorias();
 </script>
 
 </body>

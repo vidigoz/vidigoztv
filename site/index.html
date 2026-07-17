@@ -124,6 +124,47 @@
 
   @keyframes floatIcon { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
   .float { animation: floatIcon 3.4s ease-in-out infinite; }
+
+  .newsletter-card {
+    background: #16142a;
+    border-radius: 18px;
+    padding: 20px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .newsletter-card-title { font: 600 16px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .newsletter-card-sub { font: 500 12.5px 'Manrope', sans-serif; color: rgba(255,255,255,.5); margin-bottom: 10px; }
+  .newsletter-form { display: flex; flex-direction: column; gap: 8px; }
+  .newsletter-input {
+    width: 100%;
+    background: #0c0a1c;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font: 500 14px 'Manrope', sans-serif;
+    color: #f2efe9;
+    outline: none;
+    transition: border-color .2s ease;
+  }
+  .newsletter-input::placeholder { color: rgba(255,255,255,.35); }
+  .newsletter-input:focus { border-color: #e2632f; }
+  .newsletter-btn {
+    background: #e2632f;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 18px;
+    font: 600 13px 'Space Grotesk', sans-serif;
+    color: #fff;
+    cursor: pointer;
+    transition: transform .18s ease, opacity .18s ease;
+  }
+  .newsletter-btn:hover { transform: scale(1.03); }
+  .newsletter-btn:active { transform: scale(.97); }
+  .newsletter-btn:disabled { opacity: .6; cursor: default; transform: none; }
+  .newsletter-msg { font: 500 12px 'Manrope', sans-serif; min-height: 15px; margin-top: 8px; }
+  .newsletter-msg.ok { color: #4eca8b; }
+  .newsletter-msg.err { color: #e85454; }
 </style>
 </head>
 <body>
@@ -181,13 +222,14 @@
       <span class="chevron">▾</span>
     </div>
     <div class="card-body">
-      <a class="sub-item" href="#">
+      <a class="sub-item" href="https://vidigoztv.printify.me/" target="_blank" rel="noopener">
         <div class="sub-icon"><img src="icons/merch.png" alt="" onerror="this.style.display='none'"></div>
         <span class="sub-label">Merch</span>
       </a>
-      <a class="sub-item" href="#">
+      <a class="sub-item" href="javascript:void(0)" style="opacity:0.5;cursor:default;">
         <div class="sub-icon"><img src="icons/ebook.png" alt="" onerror="this.style.display='none'"></div>
-        <span class="sub-label">Ebooks</span>
+        <span class="sub-label">Libros</span>
+        <span style="font:500 10px 'Manrope',sans-serif;color:rgba(255,255,255,.45);">próximamente</span>
       </a>
     </div>
   </div>
@@ -207,10 +249,21 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     </div>
     <div class="link-text">
-      <span class="link-title">Historias</span>
-      <span class="link-sub">Tempoverso — El Hilado</span>
+      <span class="link-title">TempoVerso → Historias</span>
     </div>
   </a>
+
+  <!-- Newsletter -->
+  <div class="newsletter-card">
+    <span class="newsletter-card-title">Recibe historias en tu correo</span>
+    <span class="newsletter-card-sub">Te avisamos cada vez que hay una historia nueva</span>
+    <form class="newsletter-form" id="newsletterForm">
+      <input type="text" class="newsletter-input" id="newsletterNombre" placeholder="¿Cómo te llamamos?" required autocomplete="given-name">
+      <input type="email" class="newsletter-input" id="newsletterEmail" placeholder="tu@correo.com" required autocomplete="email">
+      <button type="submit" class="newsletter-btn" id="newsletterBtn">Suscribirme</button>
+    </form>
+    <div class="newsletter-msg" id="newsletterMsg"></div>
+  </div>
 
 </div>
 
@@ -218,6 +271,46 @@
   function toggleCard(id) {
     document.getElementById(id).classList.toggle('open');
   }
+
+  const newsletterForm  = document.getElementById('newsletterForm');
+  const newsletterNombre = document.getElementById('newsletterNombre');
+  const newsletterEmail = document.getElementById('newsletterEmail');
+  const newsletterBtn   = document.getElementById('newsletterBtn');
+  const newsletterMsg   = document.getElementById('newsletterMsg');
+
+  newsletterForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = newsletterNombre.value.trim();
+    const email = newsletterEmail.value.trim();
+
+    newsletterBtn.disabled = true;
+    newsletterBtn.textContent = 'Enviando…';
+    newsletterMsg.textContent = '';
+    newsletterMsg.className = 'newsletter-msg';
+
+    try {
+      const res = await fetch('/.netlify/functions/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, nombre, origen: 'index.html' }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+      newsletterMsg.textContent = data.alreadySubscribed
+        ? 'Ya estabas suscrito — gracias por seguir aquí.'
+        : `¡Listo, ${nombre}! Te avisaremos de cada historia nueva.`;
+      newsletterMsg.classList.add('ok');
+      newsletterForm.reset();
+    } catch (err) {
+      console.error('Error en newsletter:', err);
+      newsletterMsg.textContent = 'No se pudo completar el registro. Intenta de nuevo.';
+      newsletterMsg.classList.add('err');
+    } finally {
+      newsletterBtn.disabled = false;
+      newsletterBtn.textContent = 'Suscribirme';
+    }
+  });
 </script>
 
 </body>
