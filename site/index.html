@@ -80,6 +80,15 @@
   }
   .card.open .card-body { display: flex; }
 
+  .card-body.embed { display: none; flex-direction: column; gap: 12px; padding: 0 18px 16px; }
+  .card.open .card-body.embed { display: flex; }
+  .spotify-embed {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .spotify-embed iframe { display: block; border-radius: 12px; }
+
   .sub-item {
     flex: 1;
     display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -179,13 +188,13 @@
     <span class="tagline">Todo mi contenido en un solo lugar</span>
 
     <div class="socials">
-      <a class="social fb" href="https://www.facebook.com/vidigoztv" target="_blank" rel="noopener" aria-label="Facebook">
+      <a class="social fb" href="https://www.facebook.com/vidigoztv" target="_blank" rel="noopener" aria-label="Facebook" data-track="social_facebook">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M22 12a10 10 0 1 0-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.3c-1.2 0-1.6.8-1.6 1.6V12h2.8l-.4 2.9h-2.4v7A10 10 0 0 0 22 12"/></svg>
       </a>
-      <a class="social ig" href="https://www.instagram.com/vidigoztv/" target="_blank" rel="noopener" aria-label="Instagram">
+      <a class="social ig" href="https://www.instagram.com/vidigoztv/" target="_blank" rel="noopener" aria-label="Instagram" data-track="social_instagram">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
       </a>
-      <a class="social tt" href="https://www.tiktok.com/@vidigoztv" target="_blank" rel="noopener" aria-label="TikTok">
+      <a class="social tt" href="https://www.tiktok.com/@vidigoztv" target="_blank" rel="noopener" aria-label="TikTok" data-track="social_tiktok">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M16.5 3c.5 2.3 2 3.8 4.3 4v2.7c-1.6.1-3-.4-4.3-1.3v6.9c0 3.7-3 6.4-6.4 6.4S3.7 19 3.7 15.3c0-3.6 3-6.4 6.6-6.3v2.9c-1.9-.3-3.6 1.1-3.6 3s1.4 3.3 3.3 3.3 3.4-1.4 3.4-3.4V3z"/></svg>
       </a>
     </div>
@@ -201,11 +210,11 @@
       <span class="chevron">▾</span>
     </div>
     <div class="card-body">
-      <a class="sub-item" href="https://sacamuelas.netlify.app/" target="_blank" rel="noopener">
+      <a class="sub-item" href="https://sacamuelas.netlify.app/" target="_blank" rel="noopener" data-track="juego_sacamuelas">
         <div class="sub-icon"><img src="icons/barbero.png" alt="" onerror="this.style.display='none'"></div>
         <span class="sub-label">El Sacamuelas</span>
       </a>
-      <a class="sub-item" href="https://cerdoicario.netlify.app/" target="_blank" rel="noopener">
+      <a class="sub-item" href="https://cerdoicario.netlify.app/" target="_blank" rel="noopener" data-track="juego_cerdoicario">
         <div class="sub-icon"><img src="icons/lanzacerdos.png" alt="" onerror="this.style.display='none'"></div>
         <span class="sub-label">Cerdo Icario</span>
       </a>
@@ -222,7 +231,7 @@
       <span class="chevron">▾</span>
     </div>
     <div class="card-body">
-      <a class="sub-item" href="https://vidigoztv.printify.me/" target="_blank" rel="noopener">
+      <a class="sub-item" href="https://vidigoztv.printify.me/" target="_blank" rel="noopener" data-track="tienda_merch">
         <div class="sub-icon"><img src="icons/merch.png" alt="" onerror="this.style.display='none'"></div>
         <span class="sub-label">Merch</span>
       </a>
@@ -234,17 +243,27 @@
     </div>
   </div>
 
-  <!-- Musica -->
-  <a class="link-row" href="#">
-    <div class="card-icon">
-      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f2efe9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+  <!-- Musica: acordeón con embed de Spotify -->
+  <div class="card" id="card-musica">
+    <div class="card-head" onclick="toggleCard('card-musica')">
+      <div class="card-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f2efe9" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+      </div>
+      <span class="card-title">Musica</span>
+      <span class="chevron">▾</span>
     </div>
-    <span class="link-title">Musica</span>
-    <span class="arrow">→</span>
-  </a>
+    <div class="card-body embed">
+      <div class="spotify-embed">
+        <iframe src="https://open.spotify.com/embed/artist/3GVje1dL7jr9lipEPKbXDd?utm_source=generator" width="100%" height="352" frameborder="0" allowfullscreen loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+      </div>
+      <div class="spotify-embed">
+        <iframe src="https://open.spotify.com/embed/album/1O7cQSmCFjJwOC8vBIj9O2?utm_source=generator" width="100%" height="352" frameborder="0" allowfullscreen loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>
+      </div>
+    </div>
+  </div>
 
   <!-- Historias / CTA principal -->
-  <a class="link-row cta" href="historias.html">
+  <a class="link-row cta" href="historias.html" data-track="cta_historias">
     <div class="card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
     </div>
@@ -267,9 +286,13 @@
 
 </div>
 
+<script src="analytics.js"></script>
 <script>
   function toggleCard(id) {
-    document.getElementById(id).classList.toggle('open');
+    const card = document.getElementById(id);
+    const opening = !card.classList.contains('open');
+    card.classList.toggle('open');
+    if (opening && window.vtvTrack) window.vtvTrack(`${id}_expand`);
   }
 
   const newsletterForm  = document.getElementById('newsletterForm');
@@ -301,6 +324,7 @@
         ? 'Ya estabas suscrito — gracias por seguir aquí.'
         : `¡Listo, ${nombre}! Te avisaremos de cada historia nueva.`;
       newsletterMsg.classList.add('ok');
+      if (!data.alreadySubscribed && window.vtvTrack) window.vtvTrack('newsletter_submit');
       newsletterForm.reset();
     } catch (err) {
       console.error('Error en newsletter:', err);

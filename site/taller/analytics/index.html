@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Analytics — Taller VidigozTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050410;
+    color: #f2efe9;
+    font-family: 'Manrope', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .page { max-width: 960px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 32px; }
+  .title { font: 700 24px 'Space Grotesk', sans-serif; letter-spacing: .04em; }
+  .back-link { color: rgba(255,255,255,.4); font-size: 13px; text-decoration: none; transition: color .2s; }
+  .back-link:hover { color: #e2632f; }
+
+  .range-select {
+    background: #16142a; border: 1px solid transparent; color: #f2efe9;
+    font: 500 13px 'Manrope', sans-serif; padding: 8px 12px; border-radius: 10px;
+    outline: none; cursor: pointer;
+  }
+  .range-select:focus { border-color: #e2632f; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .kpi-card { background: #16142a; border-radius: 16px; padding: 18px 20px; }
+  .kpi-value { font: 700 28px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .kpi-label { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 4px; }
+
+  .panel { background: #16142a; border-radius: 18px; padding: 22px 20px; margin-bottom: 20px; }
+  .panel-title { font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 16px; }
+
+  .bars { display: flex; align-items: flex-end; gap: 4px; height: 140px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; min-width: 4px; }
+  .bar { width: 100%; background: #e2632f; border-radius: 3px 3px 0 0; min-height: 2px; transition: opacity .2s; }
+  .bar:hover { opacity: .8; }
+  .bar-label { font-size: 9px; color: rgba(255,255,255,.35); writing-mode: vertical-rl; text-orientation: mixed; }
+
+  .list-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.06); font-size: 13.5px; }
+  .list-row:last-child { border-bottom: none; }
+  .list-name { color: #f2efe9; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list-bar-wrap { flex: 1; max-width: 140px; height: 6px; background: #0c0a1c; border-radius: 3px; overflow: hidden; }
+  .list-bar { height: 100%; background: #e2632f; border-radius: 3px; }
+  .list-count { color: rgba(255,255,255,.5); font-variant-numeric: tabular-nums; min-width: 34px; text-align: right; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: rgba(255,255,255,.4); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  td { padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,.04); color: rgba(255,255,255,.75); }
+  .table-wrap { overflow-x: auto; }
+  tr:last-child td { border-bottom: none; }
+
+  .empty { color: rgba(255,255,255,.35); font-size: 13px; padding: 24px 0; text-align: center; }
+  .loading { color: rgba(255,255,255,.35); font-size: 14px; text-align: center; padding: 60px 0; }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="title">Analytics</div>
+      <a class="back-link" href="/taller">← Volver al taller</a>
+    </div>
+    <select class="range-select" id="rangeSelect">
+      <option value="7">Últimos 7 días</option>
+      <option value="30" selected>Últimos 30 días</option>
+      <option value="90">Últimos 90 días</option>
+      <option value="365">Último año</option>
+    </select>
+  </div>
+
+  <div id="content">
+    <div class="loading">Cargando estadísticas…</div>
+  </div>
+</div>
+
+<script>
+const rangeSelect = document.getElementById('rangeSelect');
+const content = document.getElementById('content');
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function fmtDay(iso) {
+  const d = new Date(iso);
+  return `${d.getDate()}/${d.getMonth() + 1}`;
+}
+
+function renderBars(rows) {
+  if (rows.length === 0) return '<div class="empty">Sin datos en este rango</div>';
+  const max = Math.max(...rows.map(r => r.count), 1);
+  return `<div class="bars">${rows.map(r => `
+    <div class="bar-col" title="${fmtDay(r.day)}: ${r.count}">
+      <div class="bar" style="height:${Math.max((r.count / max) * 100, 2)}%"></div>
+    </div>
+  `).join('')}</div>`;
+}
+
+function renderList(rows, labelKey) {
+  if (rows.length === 0) return '<div class="empty">Sin datos en este rango</div>';
+  const max = Math.max(...rows.map(r => r.count), 1);
+  return rows.map(r => `
+    <div class="list-row">
+      <span class="list-name">${escapeHtml(r[labelKey] || '(sin nombre)')}</span>
+      <div class="list-bar-wrap"><div class="list-bar" style="width:${(r.count / max) * 100}%"></div></div>
+      <span class="list-count">${r.count}</span>
+    </div>
+  `).join('');
+}
+
+function renderRecentTable(rows) {
+  if (rows.length === 0) return '<div class="empty">Sin eventos aún</div>';
+  return `
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>Cuándo</th><th>Tipo</th><th>Página</th><th>Detalle</th><th>Dispositivo</th></tr></thead>
+      <tbody>
+        ${rows.map(r => `
+          <tr>
+            <td>${new Date(r.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}</td>
+            <td>${escapeHtml(r.event_type)}</td>
+            <td>${escapeHtml(r.page)}</td>
+            <td>${escapeHtml(r.label || '—')}</td>
+            <td>${escapeHtml(r.device || '—')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
+
+async function loadStats(days) {
+  content.innerHTML = '<div class="loading">Cargando estadísticas…</div>';
+  try {
+    const res = await fetch(`/.netlify/functions/stats?days=${days}`);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    const totalPageviews = data.pageviewsByDay.reduce((sum, r) => sum + r.count, 0);
+    const totalClicks = data.topClicks.reduce((sum, r) => sum + r.count, 0);
+
+    content.innerHTML = `
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-value">${totalPageviews}</div>
+          <div class="kpi-label">Vistas de página</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${data.sessionsTotal}</div>
+          <div class="kpi-label">Sesiones únicas</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${totalClicks}</div>
+          <div class="kpi-label">Clics registrados</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Vistas por día</div>
+        ${renderBars(data.pageviewsByDay)}
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">Páginas más vistas</div>
+          ${renderList(data.topPages, 'page')}
+        </div>
+        <div class="panel">
+          <div class="panel-title">Clics más frecuentes</div>
+          ${renderList(data.topClicks, 'label')}
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <div class="panel-title">Dispositivos</div>
+          ${renderList(data.deviceBreakdown, 'device')}
+        </div>
+        <div class="panel">
+          <div class="panel-title">Países</div>
+          ${renderList(data.countryBreakdown, 'country')}
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Actividad reciente</div>
+        ${renderRecentTable(data.recentEvents)}
+      </div>
+    `;
+  } catch (err) {
+    console.error('Error cargando stats:', err);
+    content.innerHTML = '<div class="empty">No se pudieron cargar las estadísticas.</div>';
+  }
+}
+
+rangeSelect.addEventListener('change', () => loadStats(rangeSelect.value));
+loadStats(rangeSelect.value);
+</script>
+
+</body>
+</html>

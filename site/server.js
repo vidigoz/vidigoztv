@@ -2,6 +2,7 @@ const http  = require('http');
 const https = require('https');
 const fs    = require('fs');
 const path  = require('path');
+const { Pool } = require(path.join(__dirname, '..', 'netlify', 'functions', 'node_modules', 'pg'));
 
 const PORT = 4000;
 const ROOT = __dirname;
@@ -11,6 +12,7 @@ let TALLER_PASSWORD = 'admin';
 let NOTION_DB_ID = '';
 let NOTION_TOKEN = '';
 let NEWSLETTER_DB_ID = '';
+let VIDIGOZTV_DB_URL = '';
 
 try {
   const envPath = path.join(__dirname, '..', '.env');
@@ -28,9 +30,18 @@ try {
   const newsletterMatch = envContent.match(/^newsletter_db_id\s*=\s*(.+)$/m);
   if (newsletterMatch) NEWSLETTER_DB_ID = newsletterMatch[1].trim();
 
-  console.log(`[env] taller=*** db_id=${NOTION_DB_ID ? '✓' : '✗'} integration_token=${NOTION_TOKEN ? '✓' : '✗'} newsletter_db_id=${NEWSLETTER_DB_ID ? '✓' : '✗'}`);
+  const vidigoztvMatch = envContent.match(/^vidigoztv_db_id\s*=\s*(.+)$/m);
+  if (vidigoztvMatch) VIDIGOZTV_DB_URL = vidigoztvMatch[1].trim();
+
+  console.log(`[env] taller=*** db_id=${NOTION_DB_ID ? '✓' : '✗'} integration_token=${NOTION_TOKEN ? '✓' : '✗'} newsletter_db_id=${NEWSLETTER_DB_ID ? '✓' : '✗'} vidigoztv_db_id=${VIDIGOZTV_DB_URL ? '✓' : '✗'}`);
 } catch (e) {
   console.log('[!] No se pudo leer .env, usando valores por defecto');
+}
+
+let pgPool;
+function getPgPool() {
+  if (!pgPool) pgPool = new Pool({ connectionString: VIDIGOZTV_DB_URL, max: 3 });
+  return pgPool;
 }
 
 const MIME = {
@@ -129,6 +140,18 @@ http.createServer((req, res) => {
     return;
   }
 
+  // ── /.netlify/functions/track → registrar evento de analytics ──
+  if (urlPath === '/.netlify/functions/track') {
+    handleTrack(req, res);
+    return;
+  }
+
+  // ── /.netlify/functions/stats → consultar analytics ──
+  if (urlPath === '/.netlify/functions/stats') {
+    handleStats(req, res);
+    return;
+  }
+
   const filePath = path.join(ROOT, urlPath);
 
   // Security: prevent path traversal outside ROOT
@@ -197,6 +220,12 @@ function handleTallerRoute(urlPath, req, res) {
   // /taller/vidiwrite
   if (urlPath === '/taller/vidiwrite' || urlPath === '/taller/vidiwrite/') {
     serveFile(path.join(__dirname, 'taller/vidiwrite/index.html'), res);
+    return;
+  }
+
+  // /taller/analytics
+  if (urlPath === '/taller/analytics' || urlPath === '/taller/analytics/') {
+    serveFile(path.join(__dirname, 'taller/analytics/index.html'), res);
     return;
   }
 
@@ -450,4 +479,124 @@ function serveVidiclip(res) {
     'Cache-Control':  'no-cache',
   });
   res.end(buf);
+}
+
+// ── /track: registrar evento de analytics ──
+const VALID_EVENT_TYPES = ['pageview', 'click'];
+
+function detectDevice(userAgent) {
+  const ua = (userAgent || '').toLowerCase();
+  if (/tablet|ipad/.test(ua)) return 'tablet';
+  if (/mobile|android|iphone/.test(ua)) return 'mobile';
+  return 'desktop';
+}
+
+async function handleTrack(req, res) {
+  if (req.method !== 'POST') {
+    res.writeHead(405); res.end('Method Not Allowed'); return;
+  }
+
+  if (!VIDIGOZTV_DB_URL) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Falta vidigoztv_db_id en el servidor' }));
+    return;
+  }
+
+  let body;
+  try {
+    body = JSON.parse(await readRequestBody(req));
+  } catch {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'JSON inválido' }));
+    return;
+  }
+
+  const sessionId = String(body.sessionId || '').slice(0, 100);
+  const eventType = VALID_EVENT_TYPES.includes(body.eventType) ? body.eventType : null;
+  const page      = String(body.page || '').slice(0, 200);
+  const label     = body.label ? String(body.label).slice(0, 200) : null;
+  const referrer  = body.referrer ? String(body.referrer).slice(0, 500) : null;
+
+  if (!sessionId || !eventType || !page) {
+    res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Faltan campos requeridos' }));
+    return;
+  }
+
+  const device = detectDevice(req.headers['user-agent']);
+
+  try {
+    const db = getPgPool();
+    await db.query(
+      `INSERT INTO events (session_id, event_type, page, label, referrer, device, country)
+       VALUES ($1, $2, $3, $4, $5, $6, NULL)`,
+      [sessionId, eventType, page, label, referrer, device]
+    );
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
+  }
+}
+
+// ── /stats: consultar analytics ──
+async function handleStats(req, res) {
+  if (!VIDIGOZTV_DB_URL) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: 'Falta vidigoztv_db_id en el servidor' }));
+    return;
+  }
+
+  const qs = new URL(req.url, 'http://localhost').searchParams;
+  const days = Math.min(Math.max(parseInt(qs.get('days'), 10) || 30, 1), 365);
+
+  try {
+    const db = getPgPool();
+    const interval = `${days} days`;
+
+    const [pageviewsByDay, topPages, deviceBreakdown, topClicks, sessionsTotal, countryBreakdown, recentEvents] = await Promise.all([
+      db.query(
+        `SELECT date_trunc('day', created_at) AS day, count(*)::int AS count
+         FROM events WHERE event_type = 'pageview' AND created_at >= now() - $1::interval
+         GROUP BY 1 ORDER BY 1`, [interval]),
+      db.query(
+        `SELECT page, count(*)::int AS count
+         FROM events WHERE event_type = 'pageview' AND created_at >= now() - $1::interval
+         GROUP BY page ORDER BY count DESC LIMIT 20`, [interval]),
+      db.query(
+        `SELECT device, count(*)::int AS count
+         FROM events WHERE event_type = 'pageview' AND created_at >= now() - $1::interval
+         GROUP BY device ORDER BY count DESC`, [interval]),
+      db.query(
+        `SELECT label, count(*)::int AS count
+         FROM events WHERE event_type = 'click' AND created_at >= now() - $1::interval AND label IS NOT NULL
+         GROUP BY label ORDER BY count DESC LIMIT 20`, [interval]),
+      db.query(
+        `SELECT count(DISTINCT session_id)::int AS count
+         FROM events WHERE created_at >= now() - $1::interval`, [interval]),
+      db.query(
+        `SELECT country, count(*)::int AS count
+         FROM events WHERE event_type = 'pageview' AND created_at >= now() - $1::interval AND country IS NOT NULL
+         GROUP BY country ORDER BY count DESC LIMIT 15`, [interval]),
+      db.query(
+        `SELECT event_type, page, label, device, created_at
+         FROM events ORDER BY created_at DESC LIMIT 50`),
+    ]);
+
+    res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' });
+    res.end(JSON.stringify({
+      days,
+      pageviewsByDay: pageviewsByDay.rows,
+      topPages: topPages.rows,
+      deviceBreakdown: deviceBreakdown.rows,
+      topClicks: topClicks.rows,
+      sessionsTotal: sessionsTotal.rows[0]?.count ?? 0,
+      countryBreakdown: countryBreakdown.rows,
+      recentEvents: recentEvents.rows,
+    }));
+  } catch (err) {
+    res.writeHead(500, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ error: err.message }));
+  }
 }

@@ -18,6 +18,11 @@
   to     = "/taller/vidiwrite/index.html"
   status = 200
 
+[[redirects]]
+  from   = "/taller/analytics"
+  to     = "/taller/analytics/index.html"
+  status = 200
+
 # ── SPA fallback — debe ir al final ──────────────────────────────────────────
 [[redirects]]
   from   = "/*"

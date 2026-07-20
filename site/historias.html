@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Historias — Tempoverso</title>
 <link rel="stylesheet" href="styles/main.css">
+<script src="analytics.js"></script>
 <style>
   /* ── HISTORIAS ── */
   .hist-toolbar {
@@ -437,6 +438,7 @@ async function loadHistorias() {
 }
 
 async function loadRandom() {
+  if (window.vtvTrack) window.vtvTrack('historias_random_click');
   btnRandom.disabled = true;
   btnRandom.textContent = 'Buscando…';
   try {
@@ -456,9 +458,9 @@ async function loadRandom() {
   }
 }
 
-selCat.addEventListener('change', e => { state.filterCategoria = e.target.value; applyFilters(); });
-selAnio.addEventListener('change', e => { state.filterAnio = e.target.value; applyFilters(); });
-selSopa.addEventListener('change', e => { state.filterSopa = e.target.value; applyFilters(); });
+selCat.addEventListener('change', e => { state.filterCategoria = e.target.value; if (window.vtvTrack) window.vtvTrack('historias_filter_categoria'); applyFilters(); });
+selAnio.addEventListener('change', e => { state.filterAnio = e.target.value; if (window.vtvTrack) window.vtvTrack('historias_filter_anio'); applyFilters(); });
+selSopa.addEventListener('change', e => { state.filterSopa = e.target.value; if (window.vtvTrack) window.vtvTrack('historias_filter_sopa'); applyFilters(); });
 btnRandom.addEventListener('click', loadRandom);
 btnReset.addEventListener('click', () => {
   selCat.value = '';
