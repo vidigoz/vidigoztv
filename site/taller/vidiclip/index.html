@@ -1244,8 +1244,7 @@ async function loadFromNotion() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        filter: { property: 'Estado', status: { equals: 'Listo' } },
-        sorts:  [{ property: 'Fecha programada', direction: 'ascending' }]
+        filter: { property: 'Estado', status: { equals: 'Listo' } }
       })
     });
 
