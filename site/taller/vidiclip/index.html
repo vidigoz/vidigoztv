@@ -778,14 +778,6 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <div class="fl">Database ID</div>
           <input type="text" class="fi mono" id="cfgNotionDB" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
         </div>
-        <div class="field">
-          <div class="fl">Notion Proxy URL</div>
-          <input type="text" class="fi mono" id="cfgNotionProxy" placeholder="http://localhost:8010">
-          <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px;">
-            Siempre es <strong style="color:var(--muted2)">http://localhost:8010</strong> — corre primero en tu terminal:<br>
-            <code style="background:var(--s3);padding:2px 6px;border-radius:4px;font-size:10px;">npx local-cors-proxy --proxyUrl https://api.notion.com</code>
-          </div>
-        </div>
         <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px;">
           Database ID: en la URL de tu BD en Notion, es el string de 32 caracteres antes del "?v=".
         </div>
@@ -1293,7 +1285,7 @@ function parseNotionResults(results) {
         caption:       getNotionText(p['Caption'] || p['caption']),
         hashtags:      getNotionText(p['Hashtags'] || p['hashtags']),
         status:        p['Estado']?.status?.name || p['Estado']?.select?.name || p['Status']?.status?.name || p['Status']?.select?.name || '',
-        scheduledDate: p['Fecha programada']?.date?.start || '',
+        scheduledDate: p['Fecha de Publicación']?.date?.start || p['Fecha de publicación']?.date?.start || p['Fecha programada']?.date?.start || '',
         imageURL:      getNotionFile(p['Imagen'] || p['imagen'] || p['Image']),
         _bgImg:        null,
       };
@@ -1520,7 +1512,7 @@ async function exportVideo() {
   if (chkSchedule?.checked && story?.id) {
     const schedDate = document.getElementById('scheduleExportDate').value;
     try {
-      await updateNotionStatus(story.id, 'Programado', schedDate || null, 'Fecha programado');
+      await updateNotionStatus(story.id, 'Programado', schedDate || null, 'Fecha de Publicación');
       toast(`Exportación completa ✓ — Notion actualizado`, 'success');
     } catch(e) {
       const isWarning = e.message.includes('agrégalo manualmente') || e.message.includes('verifica');
@@ -1734,7 +1726,7 @@ async function uploadToStorage(blob, filename, contentType='video/webm') {
 async function notionPatch(endpoint, token, properties) {
   const res = await fetch(endpoint, {
     method:  'PATCH',
-    headers: { 'Authorization': `Bearer ${token}`, 'Notion-Version': '2022-06-28', 'Content-Type': 'application/json' },
+    headers: { 'x-notion-token': `Bearer ${token}`, 'Content-Type': 'application/json' },
     body:    JSON.stringify({ properties }),
   });
   const json = await res.json().catch(() => ({}));
@@ -1745,12 +1737,9 @@ async function notionPatch(endpoint, token, properties) {
   return json;
 }
 
-async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledField = 'Fecha programada') {
-  const token     = getCfg('notionToken');
-  const proxyBase = getCfg('notionProxy') || '';
-  const endpoint  = proxyBase
-    ? `${proxyBase}/v1/pages/${pageId}`
-    : `https://api.notion.com/v1/pages/${pageId}`;
+async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledField = 'Fecha de Publicación') {
+  const token    = getCfg('notionToken');
+  const endpoint = `${NOTION_PROXY}/pages/${pageId}`;
 
   const warnings = [];
 
@@ -1770,7 +1759,7 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
   // Update scheduled date — normalize to datetime-local format first, then try field name variants
   if (scheduledDateLocal) {
     const dateVal = scheduledDateLocal.includes('T') ? scheduledDateLocal : scheduledDateLocal + 'T00:00';
-    const fieldCandidates = [scheduledField, 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
+    const fieldCandidates = [scheduledField, 'Fecha de Publicación', 'Fecha de publicación', 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
     const tried = new Set();
     let dateOk = false;
     for (const field of fieldCandidates) {
@@ -1825,7 +1814,6 @@ function togglePlatform(p) {
 function openSettings() {
   document.getElementById('cfgNotionToken').value    = getCfg('notionToken') || '';
   document.getElementById('cfgNotionDB').value       = getCfg('notionDB') || '';
-  document.getElementById('cfgNotionProxy').value    = getCfg('notionProxy') || 'http://localhost:8010';
   document.getElementById('cfgMetaToken').value      = getCfg('metaToken') || '';
   document.getElementById('cfgFBPageID').value       = getCfg('fbPageID') || '';
   document.getElementById('cfgIGAccountID').value    = getCfg('igAccountID') || '';
@@ -1843,7 +1831,6 @@ function closeSettings() {
 function saveSettings() {
   setCfg('notionToken',    document.getElementById('cfgNotionToken').value.trim());
   setCfg('notionDB',       document.getElementById('cfgNotionDB').value.trim());
-  setCfg('notionProxy',    document.getElementById('cfgNotionProxy').value.trim());
   setCfg('metaToken',      document.getElementById('cfgMetaToken').value.trim());
   setCfg('fbPageID',       document.getElementById('cfgFBPageID').value.trim());
   setCfg('igAccountID',    document.getElementById('cfgIGAccountID').value.trim());
