@@ -149,6 +149,7 @@ async function loadStats(days) {
 
     const totalPageviews = data.pageviewsByDay.reduce((sum, r) => sum + r.count, 0);
     const totalClicks = data.topClicks.reduce((sum, r) => sum + r.count, 0);
+    const medievoClicks = data.topClicks.find(r => r.label === 'cta_medievo')?.count ?? 0;
 
     content.innerHTML = `
       <div class="kpi-row">
@@ -163,6 +164,10 @@ async function loadStats(days) {
         <div class="kpi-card">
           <div class="kpi-value">${totalClicks}</div>
           <div class="kpi-label">Clics registrados</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">${medievoClicks}</div>
+          <div class="kpi-label">Clics en Biografía Medieval</div>
         </div>
       </div>
 
