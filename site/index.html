@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>VidigozTV — Enlaces</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&family=Cinzel:wght@700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; }
   body {
@@ -49,6 +49,55 @@
   .social.fb { background: #1877f2; }
   .social.ig { background: linear-gradient(45deg,#f9ce34,#ee2a7b,#6228d7); border-radius: 13px; }
   .social.tt { background: #000; }
+
+  /* Medievo CTA: pergamino heráldico */
+  .medievo-link { display: block; text-decoration: none; padding: 4px 0; }
+  .medievo-parchment {
+    position: relative;
+    background: linear-gradient(180deg, #e8d4a3 0%, #dcc088 60%, #d3b378 100%);
+    border-radius: 10px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 8px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.4);
+    transition: transform .18s ease;
+  }
+  .medievo-link:hover .medievo-parchment { transform: scale(1.02); }
+  .medievo-link:active .medievo-parchment { transform: scale(.98); }
+  .medievo-parchment::before,
+  .medievo-parchment::after {
+    content: '';
+    position: absolute;
+    left: 6px; right: 6px;
+    height: 9px;
+    background: repeating-linear-gradient(90deg, #b9975c 0 8px, #a9884f 8px 16px);
+    border-radius: 5px;
+  }
+  .medievo-parchment::before { top: -5px; }
+  .medievo-parchment::after { bottom: -5px; }
+  .medievo-roll-cap {
+    position: absolute;
+    width: 14px; height: 34px;
+    background: linear-gradient(180deg, #8a6a34, #5f4a22);
+    border-radius: 7px;
+    top: 50%; transform: translateY(-50%);
+    box-shadow: inset 0 1px 2px rgba(255,255,255,.3);
+  }
+  .medievo-roll-cap.left { left: -7px; }
+  .medievo-roll-cap.right { right: -7px; }
+  .medievo-crest { flex: none; width: 46px; height: 52px; display: flex; align-items: center; justify-content: center; }
+  .medievo-text { flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+  .medievo-title { font: 700 18px 'Cinzel', serif; color: #3a2412; line-height: 1.2; }
+  .medievo-cta {
+    flex: none;
+    background: #7e2411;
+    color: #f2d9b8;
+    font: 700 11px 'Space Grotesk', sans-serif;
+    padding: 8px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
 
   .card {
     background: #16142a;
@@ -199,6 +248,24 @@
       </a>
     </div>
   </div>
+
+  <!-- Biografía Medieval: CTA a app externa -->
+  <a class="medievo-link" href="https://biografiamedieval.netlify.app/" target="_blank" rel="noopener" data-track="cta_medievo">
+    <div class="medievo-parchment">
+      <div class="medievo-roll-cap left"></div>
+      <div class="medievo-roll-cap right"></div>
+      <div class="medievo-crest">
+        <svg width="40" height="46" viewBox="0 0 40 46" fill="none">
+          <path d="M20 2 4 7v13c0 12 7 19 16 24 9-5 16-12 16-24V7L20 2z" fill="#7e2411" stroke="#3a2412" stroke-width="1.4"/>
+          <path d="M20 12l3.5 7.2 7.8.9-5.8 5.3 1.6 7.8L20 29.4l-7.1 3.8 1.6-7.8-5.8-5.3 7.8-.9L20 12z" fill="#e8d4a3"/>
+        </svg>
+      </div>
+      <div class="medievo-text">
+        <span class="medievo-title">¿Quién eras<br>en el Medievo?</span>
+      </div>
+      <div class="medievo-cta">Descúbrelo →</div>
+    </div>
+  </a>
 
   <!-- Juegos: acordeón -->
   <div class="card open" id="card-juegos">
