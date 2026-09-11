@@ -819,9 +819,6 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <div class="fl">Secret Access Key</div>
           <input type="password" class="fi mono" id="cfgStorageSecret" placeholder="xxxxxxxxxxxxx">
         </div>
-        <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-top:4px;">
-          ℹ También necesitas correr <code style="background:var(--s3);padding:1px 5px;border-radius:3px;">node server.js</code> en tu terminal para que funcione la publicación.
-        </div>
       </div>
     </div>
 
@@ -1527,8 +1524,7 @@ async function exportVideo() {
 // ════════════════════════════════════════════════════
 // PUBLISH TO META
 // ════════════════════════════════════════════════════
-const META_SERVER = '';
-const META_BASE   = 'https://graph.facebook.com';
+const META_BASE = 'https://graph.facebook.com';
 
 async function metaCall(path, data) {
   const res = await fetch(`/.netlify/functions/meta`, {
@@ -1566,10 +1562,6 @@ async function publishTo(platform) {
   if (platform === 'ig' && !igID)   { toast('Configura el Instagram Account ID', 'error'); openSettings(); return; }
   if (!getCfg('storageKey')) { toast('Configura las credenciales de R2 en Configuración', 'error'); openSettings(); return; }
   if (!APP.exportedBlob) { toast('Primero exporta el video', 'error'); return; }
-
-  // Check server running
-  try { await fetch(`${META_SERVER}/ping`); }
-  catch(e) { toast('Corre primero: node server.js', 'error'); return; }
 
   const pw = document.getElementById('pubProgress');
   const pf = document.getElementById('pubFill');
@@ -1630,7 +1622,7 @@ async function publishTo(platform) {
 
       // Step 2: subir binario al upload_url via server proxy
       pl.textContent = 'Subiendo video a Facebook...'; pf.style.width = '70%';
-      const uploadRes = await fetch(`${META_SERVER}/fb-upload`, {
+      const uploadRes = await fetch(`/.netlify/functions/fb-upload`, {
         method: 'POST',
         headers: {
           'x-upload-url':   uploadUrl,
