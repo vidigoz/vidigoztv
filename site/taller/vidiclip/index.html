@@ -1636,18 +1636,10 @@ async function publishTo(platform) {
         pf.style.width = `${70 + Math.round(pct * 20)}%`;
       });
 
-      // Cover thumbnail
-      let coverURL = null;
-      if (APP.coverBlob) {
-        try {
-          pl.textContent = 'Subiendo portada...'; pf.style.width = '80%';
-          const coverFilename = `portada_${APP.exportedTitle || Date.now()}.png`;
-          coverURL = await uploadToStorage(APP.coverBlob, coverFilename, 'image/png');
-        } catch(e) { console.warn('Cover upload failed:', e); }
-      }
-
       // Step 3: finish con metadata
-      pl.textContent = 'Publicando Reel...'; pf.style.width = '90%';
+      // Nota: video_reels NO acepta thumb_url/cover_url (confirmado contra la
+      // doc oficial de Meta v26.0) — el thumbnail se sube aparte, ver abajo.
+      pl.textContent = 'Publicando Reel...'; pf.style.width = '85%';
       const finishData = {
         upload_phase: 'finish',
         video_id:     videoId,
@@ -1656,9 +1648,30 @@ async function publishTo(platform) {
         access_token: metaTok,
       };
       if (schedTS) finishData.scheduled_publish_time = schedTS;
-      if (coverURL) finishData.thumb_url = coverURL;
       const finishResult = await metaCall(`/v19.0/${pageID}/video_reels`, finishData);
       if (finishResult.error) throw new Error(finishResult.error.message || 'Error al publicar el Reel en Facebook');
+
+      // Cover thumbnail — endpoint separado /{video_id}/thumbnails.
+      // No es crítico: si falla, el Reel ya quedó publicado/programado igual.
+      if (APP.coverBlob) {
+        try {
+          pl.textContent = 'Subiendo portada...'; pf.style.width = '95%';
+          const coverBase64 = arrayBufferToBase64(await APP.coverBlob.arrayBuffer());
+          const thumbRes = await fetch('/.netlify/functions/fb-thumbnail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              videoId, accessToken: metaTok,
+              imageBase64: coverBase64,
+              contentType: 'image/png',
+            }),
+          });
+          const thumbData = await thumbRes.json().catch(() => ({}));
+          if (!thumbRes.ok || thumbData.error) {
+            console.warn('Cover thumbnail failed:', thumbData.error?.message || thumbRes.status);
+          }
+        } catch(e) { console.warn('Cover thumbnail failed:', e); }
+      }
     }
 
     pf.style.width = '100%';
