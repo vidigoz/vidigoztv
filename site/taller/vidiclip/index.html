@@ -1686,11 +1686,25 @@ async function pollIGContainer(containerId, token, maxRetries = 30) {
   throw new Error('Timeout esperando procesamiento de video en Meta');
 }
 
-// Sube `blob` a Facebook en pedazos de ~4MB vía /.netlify/functions/fb-upload,
+// Convierte un ArrayBuffer a base64 en pedazos pequeños — evita el límite de
+// argumentos de String.fromCharCode.apply con buffers grandes (varios MB).
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const CHUNK = 0x8000; // 32KB por vuelta
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+// Sube `blob` a Facebook en pedazos de ~3MB vía /.netlify/functions/fb-upload,
 // encadenando el offset que devuelve Meta en cada respuesta (fuente de verdad
 // de cuánto recibió realmente, en vez de calcularlo a ciegas del lado nuestro).
 async function uploadVideoToFacebookChunked(uploadUrl, blob, contentType, accessToken, onProgress) {
-  const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB, con margen bajo el límite de 6MB de Netlify Functions
+  // 3MB crudos ≈ 4MB en base64 + overhead del JSON — con margen bajo el
+  // límite de ~6MB de body en Netlify Functions síncronas.
+  const CHUNK_SIZE = 3 * 1024 * 1024;
   const totalSize = blob.size;
   let offset = 0;
 
@@ -1698,17 +1712,21 @@ async function uploadVideoToFacebookChunked(uploadUrl, blob, contentType, access
     const end = Math.min(offset + CHUNK_SIZE, totalSize);
     const chunk = blob.slice(offset, end);
     const chunkBuffer = await chunk.arrayBuffer();
+    const chunkBase64 = arrayBufferToBase64(chunkBuffer);
 
+    // Mandamos el chunk en base64 dentro de un JSON en vez de binario crudo:
+    // el manejo de bodies binarios (ArrayBuffer) en netlify dev es
+    // inconsistente — el runtime local puede reportar isBase64Encoded=true
+    // pero entregar event.body vacío. JSON + base64 evita ese problema.
     const res = await fetch('/.netlify/functions/fb-upload', {
       method: 'POST',
-      headers: {
-        'x-upload-url':   uploadUrl,
-        'x-content-type': contentType,
-        'x-file-size':    String(totalSize),
-        'x-offset':       String(offset),
-        'x-access-token': accessToken,
-      },
-      body: chunkBuffer,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        uploadUrl, contentType, accessToken,
+        fileSize: totalSize,
+        offset,
+        chunkBase64,
+      }),
     });
 
     if (!res.ok) {

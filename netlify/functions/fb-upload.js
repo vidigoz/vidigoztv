@@ -9,15 +9,13 @@ const https = require('https');
 // body de entrada a ~6MB, muy por debajo de lo que pesa un Reel real
 // (~15-25MB). Facebook sí soporta archivos grandes vía su protocolo de
 // "resumable upload": se manda el video en varios POST, cada uno con su
-// `offset`, y Meta los ensambla del lado del servidor. Partimos el blob en
-// el navegador en pedazos de ~4MB y cada uno pasa por aquí individualmente.
+// `offset`, y Meta los ensambla del lado del servidor.
 //
-// Headers esperados desde Vidiclip (uno por chunk):
-//   x-upload-url    → URL que devolvió Meta en video_reels (upload_phase: start)
-//   x-content-type  → mime del video exportado
-//   x-file-size     → tamaño TOTAL en bytes del video completo
-//   x-offset        → posición (en bytes) donde empieza este chunk
-//   x-access-token  → Page Access Token
+// El chunk viaja en el BODY como JSON con el binario en base64 (no como
+// bytes crudos): el manejo de bodies binarios/ArrayBuffer en `netlify dev`
+// es inconsistente — se observó isBase64Encoded=true pero event.body vacío
+// al mandar el chunk como binario directo con headers custom. JSON+base64
+// es más pesado (~33%) pero funciona igual en local y en producción.
 
 function uploadChunkToFacebook(uploadUrl, buffer, contentType, fileSize, offset, accessToken) {
   return new Promise((ok, fail) => {
@@ -52,26 +50,23 @@ exports.handler = async (event) => {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  const headers     = event.headers;
-  const uploadUrl   = headers['x-upload-url'];
-  const contentType = headers['x-content-type'] || 'video/webm';
-  const fileSize    = headers['x-file-size'];
-  const offset      = headers['x-offset'];
-  const accessToken = headers['x-access-token'];
-
-  if (!uploadUrl || !fileSize || offset === undefined || !accessToken) {
-    return { statusCode: 400, body: JSON.stringify({ error: 'Faltan x-upload-url, x-file-size, x-offset o x-access-token' }) };
+  let payload;
+  try {
+    payload = JSON.parse(event.body || '{}');
+  } catch {
+    return { statusCode: 400, body: JSON.stringify({ error: 'JSON inválido' }) };
   }
 
-  if (!event.body) {
-    console.error('[fb-upload] event.body vacío. isBase64Encoded=', event.isBase64Encoded, 'headers=', Object.keys(headers));
-    return { statusCode: 400, body: JSON.stringify({ error: 'Body vacío — el chunk no llegó a la function' }) };
+  const { uploadUrl, contentType, fileSize, offset, accessToken, chunkBase64 } = payload;
+
+  if (!uploadUrl || fileSize === undefined || offset === undefined || !accessToken || !chunkBase64) {
+    return { statusCode: 400, body: JSON.stringify({ error: 'Faltan uploadUrl, fileSize, offset, accessToken o chunkBase64' }) };
   }
 
   try {
-    const buffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary');
+    const buffer = Buffer.from(chunkBase64, 'base64');
     console.log(`[fb-upload] chunk offset=${offset} size=${buffer.length} totalSize=${fileSize}`);
-    const result = await uploadChunkToFacebook(uploadUrl, buffer, contentType, fileSize, offset, accessToken);
+    const result = await uploadChunkToFacebook(uploadUrl, buffer, contentType || 'video/webm', fileSize, offset, accessToken);
 
     return {
       statusCode: 200,
