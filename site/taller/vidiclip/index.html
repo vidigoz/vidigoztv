@@ -1133,6 +1133,13 @@ function loadStory(idx) {
   const story = APP.stories[idx];
   if (!story) return;
 
+  // El video exportado (y su portada) son de la historia anterior — evita publicar
+  // por error el clip de otra historia si se cambia sin volver a exportar.
+  APP.exportedBlob = null;
+  APP.exportedMime = null;
+  APP.exportedTitle = null;
+  APP.coverBlob = null;
+
   // Update topbar
   document.getElementById('topbarTitle').textContent   = story.title || 'Sin título';
   document.getElementById('storyCounter').textContent  = `${idx+1} / ${APP.stories.length}`;
@@ -1399,7 +1406,8 @@ async function exportVideo() {
   if (APP.charLoaded) { charVideo.onended = null; charVideo.loop = true; charVideo.currentTime = 0; charVideo.play().catch(() => {}); }
 
   // ── helper: record one video clip of a given duration ──────────────────
-  async function doVideoExport(duration, filenameSuffix, labelPrefix, isFullVideo) {
+  // clipKind: 'full' (TikTok, formato largo) | 'short' (Reel, formato para FB/IG)
+  async function doVideoExport(duration, filenameSuffix, labelPrefix, clipKind) {
     return new Promise(async (resolve) => {
       const expW = 1080, expH = 1920;
       const expCanvas = document.createElement('canvas');
@@ -1442,7 +1450,11 @@ async function exportVideo() {
         a.href = URL.createObjectURL(blob);
         a.download = `vidiclip_${titleSlug}${filenameSuffix}.${ext}`;
         a.click();
-        if (isFullVideo) { APP.exportedBlob = blob; APP.exportedMime = mime; APP.exportedTitle = titleSlug; }
+        // El clip corto (Reel) es el formato correcto para publicar en FB/IG,
+        // así que tiene prioridad sobre el video completo (TikTok) si se exportan ambos.
+        if (clipKind === 'short' || (clipKind === 'full' && !APP.exportedBlob)) {
+          APP.exportedBlob = blob; APP.exportedMime = mime; APP.exportedTitle = titleSlug;
+        }
         resolve({ blob, ext });
       };
 
@@ -1494,8 +1506,8 @@ async function exportVideo() {
   // ── end helper ──────────────────────────────────────────────────────────
 
   const results = [];
-  if (doFull)  results.push(await doVideoExport(audioDuration,                          '_tiktok', `TikTok...`,           true));
-  if (doShort) results.push(await doVideoExport(Math.min(shortSecs, audioDuration), '_reel',   `Reel (${shortSecs}s)...`, false));
+  if (doFull)  results.push(await doVideoExport(audioDuration,                          '_tiktok', `TikTok...`,           'full'));
+  if (doShort) results.push(await doVideoExport(Math.min(shortSecs, audioDuration), '_reel',   `Reel (${shortSecs}s)...`, 'short'));
 
   // Restore character video and render loop
   if (APP.charLoaded) { charVideo.loop = false; charVideo.pause(); }
@@ -1561,7 +1573,7 @@ async function publishTo(platform) {
   if (platform === 'fb' && !pageID) { toast('Configura el Facebook Page ID', 'error'); openSettings(); return; }
   if (platform === 'ig' && !igID)   { toast('Configura el Instagram Account ID', 'error'); openSettings(); return; }
   if (!getCfg('storageKey')) { toast('Configura las credenciales de R2 en Configuración', 'error'); openSettings(); return; }
-  if (!APP.exportedBlob) { toast('Primero exporta el video', 'error'); return; }
+  if (!APP.exportedBlob) { toast('Primero exporta el video (marca "Reel" o "Video completo" y dale a Exportar)', 'error'); return; }
 
   const pw = document.getElementById('pubProgress');
   const pf = document.getElementById('pubFill');
