@@ -1625,24 +1625,16 @@ async function publishTo(platform) {
       const uploadUrl = initData.upload_url;
       if (!uploadUrl) throw new Error('Facebook no devolvió upload_url. Verifica permisos del Page Token.');
 
-      // Step 2: subir binario directo del navegador a la upload_url de Facebook
-      // (rupload.facebook.com). Evita el límite de ~6MB de las Netlify Functions
-      // síncronas — el video nunca pasa por nuestro backend.
+      // Step 2: subir el video a Facebook por chunks vía nuestra Function.
+      // rupload.facebook.com bloquea CORS (no se puede subir directo del
+      // navegador), y mandar el video completo de una vez a la Function
+      // choca con el límite de ~6MB de las Netlify Functions síncronas.
+      // Partimos el blob en pedazos y cada uno pasa por fb-upload.js,
+      // que lo reenvía a Facebook usando su protocolo de resumable upload.
       pl.textContent = 'Subiendo video a Facebook...'; pf.style.width = '70%';
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization':  `OAuth ${metaTok}`,
-          'offset':         '0',
-          'file_size':      String(APP.exportedBlob.size),
-          'Content-Type':   APP.exportedMime || 'video/webm',
-        },
-        body: APP.exportedBlob,
+      await uploadVideoToFacebookChunked(uploadUrl, APP.exportedBlob, APP.exportedMime || 'video/webm', metaTok, (pct) => {
+        pf.style.width = `${70 + Math.round(pct * 20)}%`;
       });
-      if (!uploadRes.ok) {
-        const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error?.message || err.error || `Video upload failed: ${uploadRes.status}`);
-      }
 
       // Cover thumbnail
       let coverURL = null;
@@ -1692,6 +1684,46 @@ async function pollIGContainer(containerId, token, maxRetries = 30) {
     if (d.status_code === 'ERROR') throw new Error(`Meta processing error: ${d.status || 'unknown'}`);
   }
   throw new Error('Timeout esperando procesamiento de video en Meta');
+}
+
+// Sube `blob` a Facebook en pedazos de ~4MB vía /.netlify/functions/fb-upload,
+// encadenando el offset que devuelve Meta en cada respuesta (fuente de verdad
+// de cuánto recibió realmente, en vez de calcularlo a ciegas del lado nuestro).
+async function uploadVideoToFacebookChunked(uploadUrl, blob, contentType, accessToken, onProgress) {
+  const CHUNK_SIZE = 4 * 1024 * 1024; // 4MB, con margen bajo el límite de 6MB de Netlify Functions
+  const totalSize = blob.size;
+  let offset = 0;
+
+  while (offset < totalSize) {
+    const end = Math.min(offset + CHUNK_SIZE, totalSize);
+    const chunk = blob.slice(offset, end);
+    const chunkBuffer = await chunk.arrayBuffer();
+
+    const res = await fetch('/.netlify/functions/fb-upload', {
+      method: 'POST',
+      headers: {
+        'x-upload-url':   uploadUrl,
+        'x-content-type': contentType,
+        'x-file-size':    String(totalSize),
+        'x-offset':       String(offset),
+        'x-access-token': accessToken,
+      },
+      body: chunkBuffer,
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `Video upload failed at offset ${offset}: ${res.status}`);
+    }
+
+    const data = await res.json().catch(() => ({}));
+    // Facebook devuelve el próximo offset esperado; si no viene, asumimos
+    // que avanzamos exactamente lo que mandamos.
+    const nextOffset = data.start_offset ?? data.offset;
+    offset = nextOffset !== undefined ? Number(nextOffset) : end;
+
+    if (onProgress) onProgress(offset / totalSize);
+  }
 }
 
 async function uploadToStorage(blob, filename, contentType='video/webm') {
