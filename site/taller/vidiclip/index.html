@@ -531,7 +531,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
       </div>
       <div class="field">
         <div class="fl">Hashtags</div>
-        <input type="text" class="fi" id="pubHashtags" placeholder="#historia #medieval #viral">
+        <input type="text" class="fi" id="pubHashtags" value="#medieval #minihistoria #ficcion" placeholder="#historia #medieval #viral">
       </div>
       <div class="field">
         <div class="fl">Plataformas</div>
@@ -1128,7 +1128,7 @@ function loadStory(idx) {
   // Load text
   document.getElementById('storyText').value  = story.text || '';
   document.getElementById('pubCaption').value = story.caption || '';
-  document.getElementById('pubHashtags').value = story.hashtags || '';
+  document.getElementById('pubHashtags').value = story.hashtags || '#medieval #minihistoria #ficcion';
 
   // Cover title: default "Historias Medievales", never overwrite if user already typed something
   const coverTitleEl    = document.getElementById('coverTitle');
