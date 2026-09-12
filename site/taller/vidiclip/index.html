@@ -1652,27 +1652,15 @@ async function publishTo(platform) {
       if (finishResult.error) throw new Error(finishResult.error.message || 'Error al publicar el Reel en Facebook');
 
       // Cover thumbnail — endpoint separado /{video_id}/thumbnails.
+      // Igual que en la interfaz manual de Facebook, hay que esperar a que el
+      // video termine de procesarse antes de poder ponerle portada.
       // No es crítico: si falla, el Reel ya quedó publicado/programado igual.
       if (APP.coverBlob) {
         try {
-          pl.textContent = 'Subiendo portada...'; pf.style.width = '95%';
-          const coverBase64 = arrayBufferToBase64(await APP.coverBlob.arrayBuffer());
-          const thumbRes = await fetch('/.netlify/functions/fb-thumbnail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              videoId, accessToken: metaTok,
-              imageBase64: coverBase64,
-              contentType: 'image/png',
-            }),
+          await uploadFacebookThumbnail(videoId, metaTok, APP.coverBlob, (msg) => {
+            pl.textContent = msg; pf.style.width = '95%';
           });
-          const thumbData = await thumbRes.json().catch(() => ({}));
-          if (!thumbRes.ok || thumbData.error) {
-            console.warn('Cover thumbnail failed. status=', thumbRes.status, 'response=', JSON.stringify(thumbData));
-          } else {
-            console.log('Cover thumbnail uploaded OK:', JSON.stringify(thumbData));
-          }
-        } catch(e) { console.warn('Cover thumbnail failed (exception):', e); }
+        } catch(e) { console.warn('Cover thumbnail failed:', e.message); }
       }
     }
 
@@ -1698,6 +1686,53 @@ async function publishTo(platform) {
     toast('Error: ' + err.message, 'error');
     console.error('Publish error:', err);
   }
+}
+
+// Sube la portada como thumbnail de un video de Facebook ya creado.
+// Facebook no acepta el thumbnail mientras el video sigue procesándose
+// (igual que en su interfaz manual: primero termina de subir el video,
+// después deja poner portada), así que esperamos a que esté listo y
+// reintentamos si aún lo rechaza.
+async function uploadFacebookThumbnail(videoId, token, coverBlob, onStatus, maxAttempts = 12) {
+  const imageBase64 = arrayBufferToBase64(await coverBlob.arrayBuffer());
+
+  for (let i = 0; i < maxAttempts; i++) {
+    // Consultar si el video ya terminó de procesarse.
+    // status.processing_phase.status: not_started | in_progress | complete | error
+    // status.video_status: processing | ready | ...
+    const st = await metaGet(`/v19.0/${videoId}?fields=status&access_token=${token}`);
+    const processing = st?.status?.processing_phase?.status;
+    const videoStatus = st?.status?.video_status;
+    console.log(`[thumbnail] intento ${i+1}: status=`, JSON.stringify(st?.status || st));
+
+    if (processing === 'error') {
+      throw new Error('Facebook reportó error al procesar el video');
+    }
+
+    if (processing === 'complete' || videoStatus === 'ready') {
+      if (onStatus) onStatus('Subiendo portada...');
+      const res = await fetch('/.netlify/functions/fb-thumbnail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ videoId, accessToken: token, imageBase64, contentType: 'image/png' }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && !data.error) {
+        console.log('[thumbnail] subida OK:', JSON.stringify(data));
+        return data;
+      }
+      // Si falla pese a estar "ready", reintentamos — Meta a veces necesita
+      // unos segundos más antes de aceptar la imagen.
+      console.warn(`[thumbnail] rechazado (intento ${i+1}):`, JSON.stringify(data));
+    } else {
+      if (onStatus) onStatus(`Esperando procesamiento del video... (${i+1})`);
+    }
+
+    await sleep(5000);
+  }
+
+  throw new Error('Timeout: Facebook no aceptó la portada (el video puede seguir procesándose)');
 }
 
 async function pollIGContainer(containerId, token, maxRetries = 30) {
