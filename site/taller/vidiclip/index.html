@@ -562,28 +562,25 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <div class="prog-lbl" id="exportLbl">Preparando...</div>
       </div>
 
-      <!-- Schedule on export -->
+      <!-- Exportar -->
       <div style="margin-top:10px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;">
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Exportar</div>
+
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:7px;">
           <input type="checkbox" id="chkScheduleExport" onchange="toggleScheduleExportDate()" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
           <span style="font-size:12px;font-weight:600;color:var(--muted2);">Marcar como <strong style="color:var(--text);">Programado</strong> en Notion al exportar</span>
         </label>
-        <div id="scheduleExportDateWrap" style="display:none;margin-top:8px;">
+        <div id="scheduleExportDateWrap" style="display:none;margin-bottom:7px;">
           <div style="font-size:10px;color:var(--muted);line-height:1.5;">
             Usa la fecha de <strong style="color:var(--text);">Publicar → Programar</strong>:
             <span id="scheduleExportDateEcho" style="color:var(--accent);font-weight:600;">sin fecha</span>
           </div>
           <input type="datetime-local" id="scheduleExportDate" style="display:none;">
         </div>
-      </div>
-
-      <!-- Export options -->
-      <div style="margin-top:10px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Qué exportar</div>
 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:7px;">
-          <input type="checkbox" id="chkExportFull" checked style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
-          <span style="font-size:12px;font-weight:600;color:var(--muted2);">Video <strong style="color:var(--text);">completo</strong> (duración del audio)</span>
+          <input type="checkbox" id="chkExportFull" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
+          <span style="font-size:12px;font-weight:600;color:var(--muted2);">Video <strong style="color:var(--text);">de 1min</strong> (duración del audio)</span>
         </label>
 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:7px;">
@@ -1491,7 +1488,7 @@ async function exportVideo() {
       toast(`Exportado ✓ — Notion: ${e.message}`, isWarning ? '' : 'error');
     }
   } else {
-    const parts = [doFull && 'video completo', doShort && `clip ${shortSecs}s`, doCover && 'portada'].filter(Boolean);
+    const parts = [doFull && 'video de 1min', doShort && `clip ${shortSecs}s`, doCover && 'portada'].filter(Boolean);
     toast(`Exportado ✓ — ${parts.join(', ')}`, 'success');
   }
 }
