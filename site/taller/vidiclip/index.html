@@ -1625,21 +1625,23 @@ async function publishTo(platform) {
       const uploadUrl = initData.upload_url;
       if (!uploadUrl) throw new Error('Facebook no devolvió upload_url. Verifica permisos del Page Token.');
 
-      // Step 2: subir binario al upload_url via server proxy
+      // Step 2: subir binario directo del navegador a la upload_url de Facebook
+      // (rupload.facebook.com). Evita el límite de ~6MB de las Netlify Functions
+      // síncronas — el video nunca pasa por nuestro backend.
       pl.textContent = 'Subiendo video a Facebook...'; pf.style.width = '70%';
-      const uploadRes = await fetch(`/.netlify/functions/fb-upload`, {
+      const uploadRes = await fetch(uploadUrl, {
         method: 'POST',
         headers: {
-          'x-upload-url':   uploadUrl,
-          'x-content-type': APP.exportedMime || 'video/webm',
-          'x-file-size':    String(APP.exportedBlob.size),
-          'x-access-token': metaTok,
+          'Authorization':  `OAuth ${metaTok}`,
+          'offset':         '0',
+          'file_size':      String(APP.exportedBlob.size),
+          'Content-Type':   APP.exportedMime || 'video/webm',
         },
         body: APP.exportedBlob,
       });
       if (!uploadRes.ok) {
         const err = await uploadRes.json().catch(() => ({}));
-        throw new Error(err.error || `Video upload failed: ${uploadRes.status}`);
+        throw new Error(err.error?.message || err.error || `Video upload failed: ${uploadRes.status}`);
       }
 
       // Cover thumbnail
