@@ -2619,6 +2619,13 @@ function exportCover() {
   }, 'image/png');
 }
 
+// Auto-cargar historias desde Notion al abrir la página, como si se le
+// diera click al botón — evita el paso manual en cada sesión.
+// setTimeout(0) para correr después del script de auto-env que server.js
+// inserta justo antes de </body> (precarga token/DB en localStorage) —
+// si no, loadFromNotion() se ejecutaría antes de que esa config exista.
+setTimeout(loadFromNotion, 0);
+
 </script>
 </body>
 </html>
