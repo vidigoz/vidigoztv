@@ -76,7 +76,9 @@ exports.handler = async (event) => {
 
   try {
     const imageBuffer = Buffer.from(imageBase64, 'base64');
+    console.log(`[fb-thumbnail] videoId=${videoId} imageBytes=${imageBuffer.length}`);
     const result = await postThumbnail(videoId, accessToken, imageBuffer, contentType || 'image/png');
+    console.log(`[fb-thumbnail] Meta respondió status=${result.status} body=${result.body}`);
 
     return {
       statusCode: result.status,
@@ -84,6 +86,7 @@ exports.handler = async (event) => {
       body: result.body,
     };
   } catch (err) {
+    console.error('[fb-thumbnail] error:', err.message);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };

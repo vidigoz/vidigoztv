@@ -1668,15 +1668,28 @@ async function publishTo(platform) {
           });
           const thumbData = await thumbRes.json().catch(() => ({}));
           if (!thumbRes.ok || thumbData.error) {
-            console.warn('Cover thumbnail failed:', thumbData.error?.message || thumbRes.status);
+            console.warn('Cover thumbnail failed. status=', thumbRes.status, 'response=', JSON.stringify(thumbData));
+          } else {
+            console.log('Cover thumbnail uploaded OK:', JSON.stringify(thumbData));
           }
-        } catch(e) { console.warn('Cover thumbnail failed:', e); }
+        } catch(e) { console.warn('Cover thumbnail failed (exception):', e); }
       }
     }
 
     pf.style.width = '100%';
     pl.textContent = schedTS ? '¡Programado!' : '¡Publicado!';
-    if (story) await updateNotionStatus(story.id, 'Programado', schedVal || null);
+
+    // La publicación en Meta ya es un hecho en este punto — si falla la
+    // actualización de Notion no debe mostrarse como si la publicación
+    // hubiera fallado, solo se registra en consola.
+    if (story) {
+      try {
+        await updateNotionStatus(story.id, 'Programado', schedVal || null);
+      } catch(e) {
+        console.warn('Notion no se pudo actualizar (la publicación en Meta sí fue exitosa):', e.message);
+      }
+    }
+
     setTimeout(() => pw.classList.remove('v'), 2000);
     toast(schedTS ? `Programado ✓` : `Publicado en ${platform==='ig'?'Instagram':'Facebook'} ✓`, 'success');
 
@@ -1805,6 +1818,7 @@ async function notionPatch(endpoint, token, properties) {
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) {
+    console.warn('[notionPatch] request:', JSON.stringify(properties), 'response:', JSON.stringify(json));
     const msg = json.message || json.code || `HTTP ${res.status}`;
     throw new Error(msg);
   }
