@@ -2144,6 +2144,15 @@ function toggleMobileSheet() {
   document.getElementById('rightPanel').classList.toggle('expanded');
 }
 
+// Cierra el bottom sheet (panel Video/Portada en mobile) al tocar fuera de él
+document.addEventListener('click', function(e) {
+  if (window.innerWidth > 768) return;
+  const panel = document.getElementById('rightPanel');
+  if (!panel.classList.contains('expanded')) return;
+  if (panel.contains(e.target)) return;
+  panel.classList.remove('expanded');
+});
+
 function getCfg(key) { return localStorage.getItem('vdc_'+key) || ''; }
 function setCfg(key, val) { localStorage.setItem('vdc_'+key, val); }
 
