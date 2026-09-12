@@ -1663,7 +1663,7 @@ async function publishTo(platform) {
 
     pf.style.width = '100%';
     pl.textContent = schedTS ? '¡Programado!' : '¡Publicado!';
-    if (story) await updateNotionStatus(story.id, 'Publicado', schedVal || null);
+    if (story) await updateNotionStatus(story.id, 'Programado', schedVal || null);
     setTimeout(() => pw.classList.remove('v'), 2000);
     toast(schedTS ? `Programado ✓` : `Publicado en ${platform==='ig'?'Instagram':'Facebook'} ✓`, 'success');
 
@@ -1820,7 +1820,7 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
   // Update scheduled date — normalize to datetime-local format first, then try field name variants
   if (scheduledDateLocal) {
     const dateVal = scheduledDateLocal.includes('T') ? scheduledDateLocal : scheduledDateLocal + 'T00:00';
-    const fieldCandidates = [scheduledField, 'Fecha de Publicación', 'Fecha de publicación', 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
+    const fieldCandidates = [scheduledField, 'Fecha de Publicacion', 'Fecha de Publicación', 'Fecha de publicación', 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
     const tried = new Set();
     let dateOk = false;
     for (const field of fieldCandidates) {
