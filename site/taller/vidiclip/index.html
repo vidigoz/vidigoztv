@@ -2165,17 +2165,37 @@ if (getCfg('notionToken') && getCfg('notionDB')) {
 startRenderLoop();
 renderBg();
 
-// ════ AUTOCONFIG DESDE .env (via Netlify Function) ════
+// ════ AUTOCONFIG DESDE .env / Netlify Environment Variables ════
+// Vía /.netlify/functions/config: en local (netlify dev) lee el .env raíz,
+// en producción/branch deploys lee las Environment Variables del sitio en
+// Netlify. Sólo precarga lo que el usuario no haya tecleado ya a mano en
+// Configuración — nunca sobreescribe algo que ya esté guardado.
 (async function autoconfigEnv() {
   try {
     const res = await fetch('/.netlify/functions/config');
     if (!res.ok) return;
-    const { notionToken, notionDB } = await res.json();
+    const {
+      notionToken, notionDB,
+      metaToken, metaFBPageID, metaIGAccID,
+      r2Endpoint, r2PublicURL, r2AccessKey, r2SecretKey,
+    } = await res.json();
+
     if (notionToken && !getCfg('notionToken')) setCfg('notionToken', notionToken);
     if (notionDB    && !getCfg('notionDB'))    setCfg('notionDB', notionDB);
     if (notionToken && notionDB) {
       console.log('[autoconfig] Notion config precargada desde .env');
       setNotionStatus('ok', 'Configurado — presiona "Cargar Notion"');
+    }
+
+    if (metaToken    && !getCfg('metaToken'))         setCfg('metaToken', metaToken);
+    if (metaFBPageID && !getCfg('fbPageID'))          setCfg('fbPageID', metaFBPageID);
+    if (metaIGAccID  && !getCfg('igAccountID'))       setCfg('igAccountID', metaIGAccID);
+    if (r2Endpoint   && !getCfg('storageURL'))        setCfg('storageURL', r2Endpoint);
+    if (r2PublicURL  && !getCfg('storagePublicURL'))  setCfg('storagePublicURL', r2PublicURL);
+    if (r2AccessKey  && !getCfg('storageKey'))        setCfg('storageKey', r2AccessKey);
+    if (r2SecretKey  && !getCfg('storageSecret'))     setCfg('storageSecret', r2SecretKey);
+    if (metaToken || r2AccessKey) {
+      console.log('[autoconfig] Meta/R2 config precargada desde .env / Netlify env vars');
     }
   } catch (e) {
     // Silencioso: si no hay función config o falla, el usuario puede configurar manualmente
