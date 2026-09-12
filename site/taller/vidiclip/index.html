@@ -247,6 +247,56 @@ input[type=datetime-local].fi { color-scheme: dark; }
 .rpanel-tab { flex:1; padding:10px 8px; background:transparent; border:none; color:var(--muted2); cursor:pointer; font-family:'Instrument Sans',sans-serif; font-size:12px; font-weight:600; border-bottom:2px solid transparent; transition:all .15s; }
 .rpanel-tab:hover { color:var(--text); background:var(--s2); }
 .rpanel-tab.act { color:var(--accent); border-bottom-color:var(--accent); background:transparent; }
+
+/* ══════════════════════════════════════════════════════
+   MOBILE LAYOUT (≤768px)
+   - Left panel (Assets fijos) → overlay de pantalla completa,
+     oculto por defecto, se abre con el botón "Assets" del topbar.
+   - Right panel (Video/Portada) → bottom sheet: colapsado muestra
+     solo la barra de tabs, un tap la expande a 50vh mantieniendo
+     el canvas visible arriba.
+   ══════════════════════════════════════════════════════ */
+.mobile-assets-btn { display: none; }
+.sheet-handle { display: none; }
+
+@media (max-width: 768px) {
+  .mobile-assets-btn { display: flex; }
+
+  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+  .story-title { display: none; }
+
+  .workspace { flex-direction: column; position: relative; overflow: visible; }
+
+  /* Left panel becomes a full-screen overlay, closed by default */
+  .left-panel {
+    position: fixed; inset: 0; z-index: 200;
+    width: 100%; min-width: 0;
+    transform: translateX(-100%);
+    transition: transform .25s ease;
+  }
+  .left-panel.open { transform: translateX(0); }
+
+  /* Center takes all remaining space; canvas stays visible above the sheet */
+  .center { flex: 1; width: 100%; padding: 12px; padding-bottom: 56px; }
+
+  /* Right panel becomes a bottom sheet */
+  .right-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+    width: 100%; min-width: 0;
+    border-left: none; border-top: 1px solid var(--border);
+    border-radius: 14px 14px 0 0;
+    box-shadow: 0 -8px 30px rgba(0,0,0,.5);
+    height: 56px; /* collapsed: just the tab bar + handle */
+    transition: height .25s ease;
+  }
+  .right-panel.expanded { height: 50vh; }
+
+  .sheet-handle {
+    display: flex; align-items: center; justify-content: center;
+    padding: 6px 0; cursor: pointer; flex-shrink: 0;
+  }
+  .sheet-handle .bar { width: 36px; height: 4px; border-radius: 2px; background: var(--border2); }
+}
 </style>
 </head>
 <body>
@@ -263,6 +313,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
   <div class="story-title" id="topbarTitle">Sin historias cargadas</div>
   <span class="status-badge sb-none" id="topbarBadge">—</span>
   <div class="spacer"></div>
+  <button class="topbar-btn notion mobile-assets-btn" onclick="toggleMobileAssets()">🎬 Assets</button>
   <button class="topbar-btn notion" onclick="openSettings()">⚙ Configuración</button>
   <button class="topbar-btn notion" onclick="loadFromNotion()">
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M4 5h6M4 7h4M4 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -275,7 +326,9 @@ input[type=datetime-local].fi { color-scheme: dark; }
 <div class="workspace">
 
   <!-- LEFT PANEL -->
-  <div class="left-panel">
+  <div class="left-panel" id="leftPanel">
+
+    <button class="topbar-btn mobile-assets-btn" onclick="toggleMobileAssets()" style="margin:10px;align-self:flex-end;">✕ Cerrar</button>
 
     <!-- Assets fijos -->
     <div class="panel-block">
@@ -388,7 +441,10 @@ input[type=datetime-local].fi { color-scheme: dark; }
   </div>
 
   <!-- RIGHT PANEL -->
-  <div class="right-panel">
+  <div class="right-panel" id="rightPanel">
+
+    <!-- Bottom sheet handle (mobile only) -->
+    <div class="sheet-handle" onclick="toggleMobileSheet()"><div class="bar"></div></div>
 
     <!-- Tabs -->
     <div style="display:flex;border-bottom:1px solid var(--border);flex-shrink:0;">
@@ -869,8 +925,14 @@ const CW = 405, CH = 720; // preview size, export at 1080x1920
 
 function initCanvas() {
   const wrap = document.getElementById('cwInner');
-  const avH  = window.innerHeight - 52 - 60; // topbar + controls
-  const avW  = (window.innerWidth - 280 - 300) - 40;
+  const isMobile = window.innerWidth <= 768;
+  // En desktop los paneles laterales (280px + 300px) están en flujo normal
+  // y le quitan ancho al canvas. En móvil ambos paneles son overlays fuera
+  // de flujo (fixed), así que el canvas puede usar casi todo el ancho.
+  const sideWidth = isMobile ? 24 : 280 + 300;
+  const bottomReserve = isMobile ? 130 : 60; // deja espacio al bottom sheet colapsado
+  const avH  = window.innerHeight - 52 - bottomReserve;
+  const avW  = (window.innerWidth - sideWidth) - (isMobile ? 24 : 40);
   let h = Math.min(avH - 20, 680);
   let w = h * (9/16);
   if (w > avW) { w = avW; h = w * (16/9); }
@@ -2034,6 +2096,17 @@ function saveSettings() {
 function togglePanelBlock(id) {
   const el = document.getElementById(id);
   if (el) el.classList.toggle('collapsed');
+}
+
+// ════════════════════════════════════════════════════
+// MOBILE LAYOUT: assets overlay + bottom sheet
+// ════════════════════════════════════════════════════
+function toggleMobileAssets() {
+  document.getElementById('leftPanel').classList.toggle('open');
+}
+
+function toggleMobileSheet() {
+  document.getElementById('rightPanel').classList.toggle('expanded');
 }
 
 function getCfg(key) { return localStorage.getItem('vdc_'+key) || ''; }
