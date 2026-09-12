@@ -1913,7 +1913,22 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
   // Update scheduled date — normalize to datetime-local format first, then try field name variants
   if (scheduledDateLocal) {
     const dateVal = scheduledDateLocal.includes('T') ? scheduledDateLocal : scheduledDateLocal + 'T00:00';
-    const fieldCandidates = [scheduledField, 'Fecha de Publicacion', 'Fecha de Publicación', 'Fecha de publicación', 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
+
+    // Preguntarle a Notion qué campos de fecha tiene realmente esta página,
+    // en vez de adivinar variantes de nombre (tildes, mayúsculas, etc.).
+    let detected = [];
+    try {
+      const pageRes = await fetch(endpoint, { headers: { 'x-notion-token': `Bearer ${token}` } });
+      const page = await pageRes.json();
+      detected = Object.entries(page.properties || {})
+        .filter(([, prop]) => prop.type === 'date')
+        .map(([name]) => name);
+      if (detected.length) console.log('[notion] campos de fecha detectados:', detected.join(', '));
+    } catch(e) {
+      console.warn('[notion] no se pudieron leer las propiedades de la página:', e.message);
+    }
+
+    const fieldCandidates = [...detected, scheduledField, 'Fecha de Publicacion', 'Fecha de Publicación', 'Fecha de publicación', 'Fecha programada', 'Fecha programado', 'Fecha Programada', 'Fecha Programado'];
     const tried = new Set();
     let dateOk = false;
     for (const field of fieldCandidates) {
