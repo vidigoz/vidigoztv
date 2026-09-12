@@ -73,6 +73,14 @@ body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color:
 .pb-title a { color: var(--muted2); font-size: 10px; text-decoration: none; cursor: pointer; }
 .pb-title a:hover { color: var(--accent); }
 
+/* Collapsible panel blocks */
+.panel-block.collapsible .pb-title { cursor: pointer; user-select: none; margin-bottom: 12px; }
+.panel-block.collapsible.collapsed .pb-title { margin-bottom: 0; }
+.panel-block.collapsible.collapsed .pb-body { display: none; }
+.pb-chevron { display: inline-flex; transition: transform .15s; color: var(--muted2); }
+.panel-block.collapsible.collapsed .pb-chevron { transform: rotate(-90deg); }
+.pb-title-text { display: flex; align-items: center; gap: 6px; }
+
 /* Settings inputs */
 .field { margin-bottom: 10px; }
 .field:last-child { margin-bottom: 0; }
@@ -392,8 +400,11 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div id="rtab-video">
 
     <!-- Título -->
-    <div class="panel-block">
-      <div class="pb-title">Título</div>
+    <div class="panel-block collapsible collapsed" id="pb-title">
+      <div class="pb-title" onclick="togglePanelBlock('pb-title')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Título</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <input type="text" class="fi" id="titleText" value="Historias Medievales" placeholder="Título principal..." oninput="renderText()">
       </div>
@@ -423,11 +434,15 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <input type="color" id="titleColorPicker" value="#ffffff" oninput="setLayerColor('title',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
         </div>
       </div>
+      </div>
     </div>
 
     <!-- Subtítulo -->
-    <div class="panel-block">
-      <div class="pb-title">Subtítulo</div>
+    <div class="panel-block collapsible collapsed" id="pb-subtitle">
+      <div class="pb-title" onclick="togglePanelBlock('pb-subtitle')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Subtítulo</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <input type="text" class="fi" id="subtitleText" value="www.vidigoztv.com" placeholder="Subtítulo..." oninput="renderText()">
       </div>
@@ -457,11 +472,15 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <input type="color" id="subtitleColorPicker" value="#f5c842" oninput="setLayerColor('subtitle',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
         </div>
       </div>
+      </div>
     </div>
 
     <!-- Historia / Texto principal -->
-    <div class="panel-block">
-      <div class="pb-title">Historia / Texto</div>
+    <div class="panel-block collapsible collapsed" id="pb-story">
+      <div class="pb-title" onclick="togglePanelBlock('pb-story')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Historia / Texto</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <textarea class="text-area" id="storyText" placeholder="El texto de la historia aparecerá aquí al cargar desde Notion." oninput="renderText()"></textarea>
       </div>
@@ -514,11 +533,15 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <span class="sv" id="strokeWV">1.0</span>
         </div>
       </div>
+      </div>
     </div>
 
     <!-- Publish -->
-    <div class="panel-block">
-      <div class="pb-title">Publicar</div>
+    <div class="panel-block collapsible" id="pb-publish">
+      <div class="pb-title" onclick="togglePanelBlock('pb-publish')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Publicar</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <div class="fl">Caption / Descripción</div>
         <textarea class="text-area" id="pubCaption" placeholder="Descripción para el post..." style="min-height:60px;"></textarea>
@@ -534,10 +557,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
       <div class="field">
         <div class="fl">Horarios sugeridos</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
+          <button onclick="setSuggestedTime(0)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Domingo">Dom</button>
+          <button onclick="setSuggestedTime(1)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Lunes">Lun</button>
+          <button onclick="setSuggestedTime(2)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Martes">Mar</button>
           <button onclick="setSuggestedTime(3)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Miércoles">Mié</button>
           <button onclick="setSuggestedTime(4)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Jueves">Jue</button>
           <button onclick="setSuggestedTime(5)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Viernes">Vie</button>
-          <input type="time" id="suggestTime" value="18:00" style="background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:10px;padding:3px 6px;outline:none;color-scheme:dark;">
+          <button onclick="setSuggestedTime(6)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Sábado">Sáb</button>
+          <input type="time" id="suggestTime" value="14:00" style="background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:10px;padding:3px 6px;outline:none;color-scheme:dark;">
         </div>
       </div>
 
@@ -552,20 +579,21 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <button class="btn local-toggle" id="btnLocalOnly" onclick="toggleLocalOnly()">☁ Subir a la nube: activado</button>
         <button class="btn ig" id="btnPublishIG" onclick="publishTo('ig')" disabled title="Instagram deshabilitado por ahora">📸 Publicar en Instagram</button>
       </div>
+      </div>
     </div>
 
     <!-- Export progress -->
-    <div class="panel-block">
-      <div class="pb-title">Exportar</div>
+    <div class="panel-block collapsible" id="pb-export">
+      <div class="pb-title" onclick="togglePanelBlock('pb-export')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Exportar</span>
+      </div>
+      <div class="pb-body">
       <div class="prog-wrap v" id="exportProgress" style="display:none;">
         <div class="prog-bar"><div class="prog-fill" id="exportFill"></div></div>
         <div class="prog-lbl" id="exportLbl">Preparando...</div>
       </div>
 
-      <!-- Exportar -->
       <div style="margin-top:10px;padding:10px;background:var(--s2);border:1px solid var(--border);border-radius:9px;">
-        <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Exportar</div>
-
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:7px;">
           <input type="checkbox" id="chkScheduleExport" onchange="toggleScheduleExportDate()" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
           <span style="font-size:12px;font-weight:600;color:var(--muted2);">Marcar como <strong style="color:var(--text);">Programado</strong> en Notion al exportar</span>
@@ -595,6 +623,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <span style="font-size:12px;font-weight:600;color:var(--muted2);"><strong style="color:var(--text);">Portada</strong> PNG 1080×1920</span>
         </label>
       </div>
+      </div>
     </div>
 
     </div><!-- end rtab-video -->
@@ -602,8 +631,11 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <!-- ═══ COVER TAB ═══ -->
     <div id="rtab-cover" style="display:none;">
 
-    <div class="panel-block">
-      <div class="pb-title">Portada del Reel</div>
+    <div class="panel-block collapsible collapsed" id="pb-coverbg">
+      <div class="pb-title" onclick="togglePanelBlock('pb-coverbg')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Portada del Reel</span>
+      </div>
+      <div class="pb-body">
       <div style="font-size:10px;color:var(--muted2);line-height:1.6;margin-bottom:10px;">
         Usa la misma imagen de fondo del video o sube una diferente. Agrega título y subtítulo para la portada.
       </div>
@@ -628,10 +660,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <span class="sv" id="coverDarkenV">40%</span>
         </div>
       </div>
+      </div>
     </div>
 
-    <div class="panel-block">
-      <div class="pb-title">Título portada</div>
+    <div class="panel-block collapsible collapsed" id="pb-covertitle">
+      <div class="pb-title" onclick="togglePanelBlock('pb-covertitle')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Título portada</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <input type="text" class="fi" id="coverTitle" placeholder="Título del reel..." oninput="renderCover()">
       </div>
@@ -658,10 +694,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <input type="color" id="coverTitleColorPicker" value="#ffffff" oninput="setCoverLayerColor('title',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
         </div>
       </div>
+      </div>
     </div>
 
-    <div class="panel-block">
-      <div class="pb-title">Subtítulo portada</div>
+    <div class="panel-block collapsible collapsed" id="pb-coversubtitle">
+      <div class="pb-title" onclick="togglePanelBlock('pb-coversubtitle')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Subtítulo portada</span>
+      </div>
+      <div class="pb-body">
       <div class="field">
         <input type="text" class="fi" id="coverSubtitle" placeholder="Subtítulo o descripción corta..." oninput="renderCover()">
       </div>
@@ -688,10 +728,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <input type="color" id="coverSubtitleColorPicker" value="#f5c842" oninput="setCoverLayerColor('subtitle',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
         </div>
       </div>
+      </div>
     </div>
 
-    <div class="panel-block">
-      <div class="pb-title">Preview portada</div>
+    <div class="panel-block collapsible" id="pb-coverpreview">
+      <div class="pb-title" onclick="togglePanelBlock('pb-coverpreview')">
+        <span class="pb-title-text"><span class="pb-chevron">▾</span>Preview portada</span>
+      </div>
+      <div class="pb-body">
       <div style="position:relative;display:inline-block;width:100%;">
         <canvas id="coverCanvas" style="width:100%;border-radius:8px;border:1px solid var(--border);display:block;"></canvas>
         <div class="drag-overlay" id="coverDragOverlay" style="border-radius:8px;">
@@ -704,6 +748,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-top:6px;">
           La portada se usa automáticamente como thumbnail al publicar en FB e IG.
         </div>
+      </div>
       </div>
     </div>
 
@@ -1981,6 +2026,14 @@ function saveSettings() {
   closeSettings();
   toast('Configuración guardada ✓', 'success');
   if (getCfg('notionToken') && getCfg('notionDB')) setNotionStatus('ok', 'Configurado — presiona "Cargar Notion"');
+}
+
+// ════════════════════════════════════════════════════
+// COLLAPSIBLE PANEL BLOCKS
+// ════════════════════════════════════════════════════
+function togglePanelBlock(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('collapsed');
 }
 
 function getCfg(key) { return localStorage.getItem('vdc_'+key) || ''; }
