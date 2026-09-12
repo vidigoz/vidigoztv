@@ -1688,13 +1688,38 @@ async function publishTo(platform) {
   }
 }
 
+// Recomprime un blob de imagen a JPEG con la calidad dada, dibujándolo en un
+// canvas temporal. Reduce drásticamente el peso frente a un PNG con foto.
+function blobToJpeg(blob, quality = 0.92) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext('2d').drawImage(img, 0, 0);
+      URL.revokeObjectURL(url);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('No se pudo convertir la portada a JPEG')), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la portada')); };
+    img.src = url;
+  });
+}
+
 // Sube la portada como thumbnail de un video de Facebook ya creado.
 // Facebook no acepta el thumbnail mientras el video sigue procesándose
 // (igual que en su interfaz manual: primero termina de subir el video,
 // después deja poner portada), así que esperamos a que esté listo y
 // reintentamos si aún lo rechaza.
 async function uploadFacebookThumbnail(videoId, token, coverBlob, onStatus, maxAttempts = 12) {
-  const imageBase64 = arrayBufferToBase64(await coverBlob.arrayBuffer());
+  // Recomprimir la portada a JPEG antes de mandarla: un PNG de 1080x1920 con
+  // foto de fondo pesa varios MB y, con el inflado de base64 más las copias
+  // intermedias del multipart, tumbaba el proceso de netlify dev por memoria.
+  // En JPEG al 92% la misma portada baja a cientos de KB, sin diferencia
+  // visible para un thumbnail. Facebook acepta JPEG sin problema.
+  const jpegBlob = await blobToJpeg(coverBlob, 0.92);
+  console.log(`[thumbnail] portada: PNG ${(coverBlob.size/1024).toFixed(0)}KB → JPEG ${(jpegBlob.size/1024).toFixed(0)}KB`);
+  const imageBase64 = arrayBufferToBase64(await jpegBlob.arrayBuffer());
 
   for (let i = 0; i < maxAttempts; i++) {
     // Consultar si el video ya terminó de procesarse.
@@ -1714,7 +1739,7 @@ async function uploadFacebookThumbnail(videoId, token, coverBlob, onStatus, maxA
       const res = await fetch('/.netlify/functions/fb-thumbnail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoId, accessToken: token, imageBase64, contentType: 'image/png' }),
+        body: JSON.stringify({ videoId, accessToken: token, imageBase64, contentType: 'image/jpeg' }),
       });
       const data = await res.json().catch(() => ({}));
 
@@ -1866,6 +1891,11 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
 
   const warnings = [];
 
+  // Un fallo de red (servidor caído, sin conexión) no dice nada sobre la
+  // configuración de Notion — hay que distinguirlo para no reportar
+  // "el campo no existe" cuando en realidad la petición nunca llegó.
+  const isNetworkError = (e) => e instanceof TypeError || /Failed to fetch|NetworkError|ERR_/.test(e.message);
+
   // Notion "Estado" can be either Status or Select type — try both
   let statusOk = false;
   for (const estadoProp of [{ status: { name: status } }, { select: { name: status } }]) {
@@ -1874,6 +1904,7 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
       statusOk = true;
       break;
     } catch(e) {
+      if (isNetworkError(e)) throw new Error('No se pudo conectar con el servidor — ¿sigue corriendo netlify dev?');
       console.warn('Notion Estado update failed with format, trying next:', e.message);
     }
   }
@@ -1893,6 +1924,7 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
         dateOk = true;
         break;
       } catch(e) {
+        if (isNetworkError(e)) throw new Error('No se pudo conectar con el servidor — ¿sigue corriendo netlify dev?');
         console.warn(`Notion date field "${field}" failed:`, e.message);
       }
     }
