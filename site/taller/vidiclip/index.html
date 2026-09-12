@@ -419,25 +419,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
         </div>
       </div>
       <div class="field">
-        <div class="fl">Color / Posición</div>
-        <div class="cdots" id="titleColorDots" style="margin-bottom:8px;">
+        <div class="fl">Color</div>
+        <div class="cdots" id="titleColorDots">
           <div class="cd act" style="background:#fff" onclick="setLayerColor('title','#ffffff',this)"></div>
           <div class="cd" style="background:#f5c842" onclick="setLayerColor('title','#f5c842',this)"></div>
           <div class="cd" style="background:#f5e6c8" onclick="setLayerColor('title','#f5e6c8',this)"></div>
           <div class="cd" style="background:#aaddff" onclick="setLayerColor('title','#aaddff',this)"></div>
           <div class="cd" style="background:#ffaaaa" onclick="setLayerColor('title','#ffaaaa',this)"></div>
           <input type="color" id="titleColorPicker" value="#ffffff" oninput="setLayerColor('title',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
-        </div>
-        <div class="pos-grid" id="titlePosGrid">
-          <div class="pg-btn" onclick="setLayerPos('title','top-left',event)">↖</div>
-          <div class="pg-btn" onclick="setLayerPos('title','top-center',event)">↑</div>
-          <div class="pg-btn" onclick="setLayerPos('title','top-right',event)">↗</div>
-          <div class="pg-btn" onclick="setLayerPos('title','mid-left',event)">←</div>
-          <div class="pg-btn" onclick="setLayerPos('title','mid-center',event)">·</div>
-          <div class="pg-btn" onclick="setLayerPos('title','mid-right',event)">→</div>
-          <div class="pg-btn act" onclick="setLayerPos('title','bot-left',event)">↙</div>
-          <div class="pg-btn" onclick="setLayerPos('title','bot-center',event)">↓</div>
-          <div class="pg-btn" onclick="setLayerPos('title','bot-right',event)">↘</div>
         </div>
       </div>
     </div>
@@ -464,25 +453,14 @@ input[type=datetime-local].fi { color-scheme: dark; }
         </div>
       </div>
       <div class="field">
-        <div class="fl">Color / Posición</div>
-        <div class="cdots" id="subtitleColorDots" style="margin-bottom:8px;">
+        <div class="fl">Color</div>
+        <div class="cdots" id="subtitleColorDots">
           <div class="cd act" style="background:#f5c842" onclick="setLayerColor('subtitle','#f5c842',this)"></div>
           <div class="cd" style="background:#fff" onclick="setLayerColor('subtitle','#ffffff',this)"></div>
           <div class="cd" style="background:#f5e6c8" onclick="setLayerColor('subtitle','#f5e6c8',this)"></div>
           <div class="cd" style="background:#aaddff" onclick="setLayerColor('subtitle','#aaddff',this)"></div>
           <div class="cd" style="background:#ffaaaa" onclick="setLayerColor('subtitle','#ffaaaa',this)"></div>
           <input type="color" id="subtitleColorPicker" value="#f5c842" oninput="setLayerColor('subtitle',this.value,null)" style="width:20px;height:20px;border-radius:50%;border:2px solid var(--border);cursor:pointer;padding:0;background:none;">
-        </div>
-        <div class="pos-grid" id="subtitlePosGrid">
-          <div class="pg-btn" onclick="setLayerPos('subtitle','top-left',event)">↖</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','top-center',event)">↑</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','top-right',event)">↗</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','mid-left',event)">←</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','mid-center',event)">·</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','mid-right',event)">→</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','bot-left',event)">↙</div>
-          <div class="pg-btn act" onclick="setLayerPos('subtitle','bot-center',event)">↓</div>
-          <div class="pg-btn" onclick="setLayerPos('subtitle','bot-right',event)">↘</div>
         </div>
       </div>
     </div>
@@ -540,20 +518,6 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <label>Grosor</label>
           <input type="range" min="0" max="8" step="0.5" value="1.0" id="strokeW" oninput="renderText();document.getElementById('strokeWV').textContent=(+this.value).toFixed(1)">
           <span class="sv" id="strokeWV">1.0</span>
-        </div>
-      </div>
-      <div class="field">
-        <div class="fl">Posición del texto</div>
-        <div class="pos-grid" id="posGrid">
-          <div class="pg-btn" onclick="setPos('top-left')">↖</div>
-          <div class="pg-btn act" onclick="setPos('top-center')">↑</div>
-          <div class="pg-btn" onclick="setPos('top-right')">↗</div>
-          <div class="pg-btn" onclick="setPos('mid-left')">←</div>
-          <div class="pg-btn" onclick="setPos('mid-center')">·</div>
-          <div class="pg-btn" onclick="setPos('mid-right')">→</div>
-          <div class="pg-btn" onclick="setPos('bot-left')">↙</div>
-          <div class="pg-btn" onclick="setPos('bot-center')">↓</div>
-          <div class="pg-btn" onclick="setPos('bot-right')">↘</div>
         </div>
       </div>
     </div>
