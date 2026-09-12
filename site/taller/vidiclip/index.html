@@ -297,7 +297,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <div class="fl">Chroma key</div>
         <div class="chroma-row">
           <label>Color</label>
-          <input type="color" id="chromaColor" value="#00ff00" oninput="updateChroma()">
+          <input type="color" id="chromaColor" value="#07ba05" oninput="updateChroma()">
           <span style="font-size:10px;color:var(--muted2);">Verde</span>
         </div>
         <div class="chroma-row">
@@ -578,7 +578,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
       </div>
       <div class="field">
         <div class="fl">Programar para</div>
-        <input type="datetime-local" class="fi" id="scheduleDate">
+        <input type="datetime-local" class="fi" id="scheduleDate" oninput="syncScheduleEcho()">
       </div>
       <div class="field">
         <div class="fl">Horarios sugeridos</div>
@@ -618,8 +618,11 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <span style="font-size:12px;font-weight:600;color:var(--muted2);">Marcar como <strong style="color:var(--text);">Programado</strong> en Notion al exportar</span>
         </label>
         <div id="scheduleExportDateWrap" style="display:none;margin-top:8px;">
-          <div style="font-size:10px;color:var(--muted);margin-bottom:4px;">Fecha de programación</div>
-          <input type="datetime-local" id="scheduleExportDate" class="fi" style="width:100%;box-sizing:border-box;color-scheme:dark;">
+          <div style="font-size:10px;color:var(--muted);line-height:1.5;">
+            Usa la fecha de <strong style="color:var(--text);">Publicar → Programar</strong>:
+            <span id="scheduleExportDateEcho" style="color:var(--accent);font-weight:600;">sin fecha</span>
+          </div>
+          <input type="datetime-local" id="scheduleExportDate" style="display:none;">
         </div>
       </div>
 
@@ -682,7 +685,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Título portada</div>
       <div class="field">
-        <input type="text" class="fi" id="coverTitle" placeholder="Título del reel..." oninput="renderCover()">
+        <input type="text" class="fi" id="coverTitle" value="HISTORIAS MEDIEVALES" placeholder="Título del reel..." oninput="renderCover()">
       </div>
       <div class="field">
         <select class="fi" id="coverTitleFont" onchange="renderCover()" style="margin-bottom:6px;">
@@ -712,7 +715,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Subtítulo portada</div>
       <div class="field">
-        <input type="text" class="fi" id="coverSubtitle" placeholder="Subtítulo o descripción corta..." oninput="renderCover()">
+        <input type="text" class="fi" id="coverSubtitle" value="www.vidigoztv.com" placeholder="Subtítulo o descripción corta..." oninput="renderCover()">
       </div>
       <div class="field">
         <select class="fi" id="coverSubtitleFont" onchange="renderCover()" style="margin-bottom:6px;">
@@ -852,7 +855,7 @@ const APP = {
   platforms: { ig: false, fb: true },
   isPlaying: false,
   animFrame: null,
-  chroma: { color: { r:0,g:255,b:0 }, tol: 50, smooth: 15 },
+  chroma: { color: { r:7,g:186,b:5 }, tol: 50, smooth: 15 },
 };
 
 const NOTION_PROXY = '/.netlify/functions/notion-proxy';
@@ -1163,19 +1166,16 @@ function loadStory(idx) {
   document.getElementById('pubCaption').value = story.caption || '';
   document.getElementById('pubHashtags').value = story.hashtags || '';
 
-  // Cover title: default "Historias Medievales", never overwrite if user already typed something
-  const coverTitleEl    = document.getElementById('coverTitle');
-  const coverSubtitleEl = document.getElementById('coverSubtitle');
-  if (!coverTitleEl.value) coverTitleEl.value = 'Historias Medievales';
-
-  // Cover subtitle: always the story title from Notion (updates on every story navigation)
-  coverSubtitleEl.value = story.title || '';
+  // Portada: título y subtítulo son fijos de marca en todas las historias.
+  document.getElementById('coverTitle').value    = 'HISTORIAS MEDIEVALES';
+  document.getElementById('coverSubtitle').value = 'www.vidigoztv.com';
   renderCover();
   if (story.scheduledDate) {
     // datetime-local requires "yyyy-MM-ddThh:mm" — append T00:00 if Notion only gave a date
     const sd = story.scheduledDate.slice(0, 16);
     document.getElementById('scheduleDate').value = sd.includes('T') ? sd : sd + 'T00:00';
   }
+  syncScheduleEcho();
 
   // Load bg image
   if (story.imageURL) {
@@ -1519,9 +1519,13 @@ async function exportVideo() {
   // Update Notion if "Programado" is checked
   const chkSchedule = document.getElementById('chkScheduleExport');
   if (chkSchedule?.checked && story?.id) {
-    const schedDate = document.getElementById('scheduleExportDate').value;
+    // Una sola fecha: la del panel de Publicar (la misma con la que se programa
+    // el post en Facebook). El campo propio del panel de exportar queda sólo
+    // como respaldo, para no pedir la fecha dos veces.
+    const schedDate = document.getElementById('scheduleDate').value
+                   || document.getElementById('scheduleExportDate').value;
     try {
-      await updateNotionStatus(story.id, 'Programado', schedDate || null, 'Fecha de Publicación');
+      await updateNotionStatus(story.id, 'Programado', schedDate || null, 'Fecha de Publicacion');
       toast(`Exportación completa ✓ — Notion actualizado`, 'success');
     } catch(e) {
       const isWarning = e.message.includes('agrégalo manualmente') || e.message.includes('verifica');
@@ -1885,7 +1889,7 @@ async function notionPatch(endpoint, token, properties) {
   return json;
 }
 
-async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledField = 'Fecha de Publicación') {
+async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledField = 'Fecha de Publicacion') {
   const token    = getCfg('notionToken');
   const endpoint = `${NOTION_PROXY}/pages/${pageId}`;
 
@@ -1955,6 +1959,20 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
 function toggleScheduleExportDate() {
   const checked = document.getElementById('chkScheduleExport').checked;
   document.getElementById('scheduleExportDateWrap').style.display = checked ? 'block' : 'none';
+  if (checked) syncScheduleEcho();
+}
+
+// Refleja en el panel de exportar la fecha del panel de Publicar, que es la
+// única que se usa (para Facebook y para Notion).
+function syncScheduleEcho() {
+  const echo = document.getElementById('scheduleExportDateEcho');
+  if (!echo) return;
+  const val = document.getElementById('scheduleDate').value;
+  if (!val) { echo.textContent = 'sin fecha'; return; }
+  const d = new Date(val);
+  echo.textContent = isNaN(d) ? val : d.toLocaleString('es-MX', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 }
 
 function setSuggestedTime(dayOfWeek) {
@@ -1971,6 +1989,7 @@ function setSuggestedTime(dayOfWeek) {
   const pad = n => String(n).padStart(2,'0');
   const val = `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())}T${pad(hh)}:${pad(mm)}`;
   document.getElementById('scheduleDate').value = val;
+  syncScheduleEcho();
 }
 
 function togglePlatform(p) {
