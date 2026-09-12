@@ -401,7 +401,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Título</div>
       <div class="field">
-        <input type="text" class="fi" id="titleText" placeholder="Título principal..." oninput="renderText()">
+        <input type="text" class="fi" id="titleText" value="HISTORIAS MEDIEVALES" placeholder="Título principal..." oninput="renderText()">
       </div>
       <div class="field">
         <div class="fl">Fuente / Tamaño</div>
@@ -446,7 +446,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Subtítulo</div>
       <div class="field">
-        <input type="text" class="fi" id="subtitleText" placeholder="Subtítulo..." oninput="renderText()">
+        <input type="text" class="fi" id="subtitleText" value="www.vidigoztv.com" placeholder="Subtítulo..." oninput="renderText()">
       </div>
       <div class="field">
         <div class="fl">Fuente / Tamaño</div>
@@ -685,7 +685,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Título portada</div>
       <div class="field">
-        <input type="text" class="fi" id="coverTitle" value="HISTORIAS MEDIEVALES" placeholder="Título del reel..." oninput="renderCover()">
+        <input type="text" class="fi" id="coverTitle" placeholder="Título del reel..." oninput="renderCover()">
       </div>
       <div class="field">
         <select class="fi" id="coverTitleFont" onchange="renderCover()" style="margin-bottom:6px;">
@@ -715,7 +715,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     <div class="panel-block">
       <div class="pb-title">Subtítulo portada</div>
       <div class="field">
-        <input type="text" class="fi" id="coverSubtitle" value="www.vidigoztv.com" placeholder="Subtítulo o descripción corta..." oninput="renderCover()">
+        <input type="text" class="fi" id="coverSubtitle" placeholder="Subtítulo o descripción corta..." oninput="renderCover()">
       </div>
       <div class="field">
         <select class="fi" id="coverSubtitleFont" onchange="renderCover()" style="margin-bottom:6px;">
@@ -1166,9 +1166,18 @@ function loadStory(idx) {
   document.getElementById('pubCaption').value = story.caption || '';
   document.getElementById('pubHashtags').value = story.hashtags || '';
 
-  // Portada: título y subtítulo son fijos de marca en todas las historias.
-  document.getElementById('coverTitle').value    = 'HISTORIAS MEDIEVALES';
-  document.getElementById('coverSubtitle').value = 'www.vidigoztv.com';
+  // Cover title: default "Historias Medievales", never overwrite if user already typed something
+  const coverTitleEl    = document.getElementById('coverTitle');
+  const coverSubtitleEl = document.getElementById('coverSubtitle');
+  if (!coverTitleEl.value) coverTitleEl.value = 'Historias Medievales';
+
+  // Cover subtitle: always the story title from Notion (updates on every story navigation)
+  coverSubtitleEl.value = story.title || '';
+
+  // Video: título y subtítulo son fijos de marca en todas las historias.
+  document.getElementById('titleText').value    = 'HISTORIAS MEDIEVALES';
+  document.getElementById('subtitleText').value = 'www.vidigoztv.com';
+  renderText();
   renderCover();
   if (story.scheduledDate) {
     // datetime-local requires "yyyy-MM-ddThh:mm" — append T00:00 if Notion only gave a date
