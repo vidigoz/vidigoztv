@@ -173,12 +173,6 @@ select.fi { cursor: pointer; }
 .pg-btn { padding: 6px; background: var(--s2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted2); cursor: pointer; font-size: 10px; text-align: center; transition: all .15s; }
 .pg-btn:hover, .pg-btn.act { background: rgba(245,200,66,.1); border-color: rgba(245,200,66,.4); color: var(--accent); }
 
-/* Publish section */
-.pub-platform { display: flex; gap: 6px; margin-bottom: 10px; }
-.pp-btn { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--s2); color: var(--muted2); cursor: pointer; font-family: 'Instrument Sans', sans-serif; font-size: 11px; font-weight: 600; text-align: center; transition: all .15s; display: flex; align-items: center; justify-content: center; gap: 5px; }
-.pp-btn.act.ig { background: rgba(155,109,255,.1); border-color: rgba(155,109,255,.4); color: var(--purple); }
-.pp-btn.act.fb { background: rgba(74,158,255,.1); border-color: rgba(74,158,255,.4); color: var(--info); }
-.pp-btn:hover:not(.act) { border-color: var(--border2); background: var(--s3); }
 
 /* Datetime input */
 input[type=datetime-local].fi { color-scheme: dark; }
@@ -534,13 +528,6 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <input type="text" class="fi" id="pubHashtags" value="#medieval #minihistoria #ficcion" placeholder="#historia #medieval #viral">
       </div>
       <div class="field">
-        <div class="fl">Plataformas</div>
-        <div class="pub-platform">
-          <button class="pp-btn ig" id="ppIG" onclick="togglePlatform('ig')">📸 Instagram</button>
-          <button class="pp-btn fb act fb" id="ppFB" onclick="togglePlatform('fb')">📘 Facebook</button>
-        </div>
-      </div>
-      <div class="field">
         <div class="fl">Programar para</div>
         <input type="datetime-local" class="fi" id="scheduleDate" oninput="syncScheduleEcho()">
       </div>
@@ -561,9 +548,9 @@ input[type=datetime-local].fi { color-scheme: dark; }
 
       <div style="margin-top:10px;">
         <button class="btn primary" id="btnExport2" onclick="exportVideo()" disabled>⬇ Exportar WebM</button>
-        <button class="btn local-toggle" id="btnLocalOnly" onclick="toggleLocalOnly()">☁ Subir a la nube: activado</button>
-        <button class="btn ig" id="btnPublishIG" onclick="publishTo('ig')" disabled>📸 Publicar en Instagram</button>
         <button class="btn fb" id="btnPublishFB" onclick="publishTo('fb')" disabled>📘 Publicar en Facebook</button>
+        <button class="btn local-toggle" id="btnLocalOnly" onclick="toggleLocalOnly()">☁ Subir a la nube: activado</button>
+        <button class="btn ig" id="btnPublishIG" onclick="publishTo('ig')" disabled title="Instagram deshabilitado por ahora">📸 Publicar en Instagram</button>
       </div>
     </div>
 
@@ -816,7 +803,6 @@ const APP = {
   charScale: 0.65,
   textColor: '#ffffff',
   textPos: 'top-center',
-  platforms: { ig: false, fb: true },
   isPlaying: false,
   animFrame: null,
   chroma: { color: { r:7,g:186,b:5 }, tol: 50, smooth: 15 },
@@ -1965,11 +1951,6 @@ function setSuggestedTime(dayOfWeek) {
   syncScheduleEcho();
 }
 
-function togglePlatform(p) {
-  APP.platforms[p] = !APP.platforms[p];
-  document.getElementById(`pp${p.toUpperCase()}`).classList.toggle('act', APP.platforms[p]);
-}
-
 // ════════════════════════════════════════════════════
 // SETTINGS
 // ════════════════════════════════════════════════════
@@ -2022,14 +2003,16 @@ function applyLocalOnlyUI() {
   const btn = document.getElementById('btnLocalOnly');
   if (!btn) return;
   if (localOnly) {
-    btn.textContent = '🖥 Solo local: activado';
-    btn.classList.add('active');
-  } else {
-    btn.textContent = '☁ Subir a la nube: activado';
+    // Nube desactivada — opaco/gris
+    btn.textContent = '🖥 Subir a la nube: desactivado';
     btn.classList.remove('active');
+  } else {
+    // Nube activada — verde
+    btn.textContent = '☁ Subir a la nube: activado';
+    btn.classList.add('active');
   }
   const storyLoaded = APP.stories && APP.currentIdx >= 0 && APP.stories[APP.currentIdx];
-  document.getElementById('btnPublishIG').disabled = localOnly || !storyLoaded;
+  document.getElementById('btnPublishIG').disabled = true; // Instagram deshabilitado por ahora
   document.getElementById('btnPublishFB').disabled = localOnly || !storyLoaded;
 }
 
