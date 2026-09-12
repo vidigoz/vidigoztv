@@ -63,8 +63,14 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Faltan x-upload-url, x-file-size, x-offset o x-access-token' }) };
   }
 
+  if (!event.body) {
+    console.error('[fb-upload] event.body vacío. isBase64Encoded=', event.isBase64Encoded, 'headers=', Object.keys(headers));
+    return { statusCode: 400, body: JSON.stringify({ error: 'Body vacío — el chunk no llegó a la function' }) };
+  }
+
   try {
-    const buffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'utf8');
+    const buffer = Buffer.from(event.body, event.isBase64Encoded ? 'base64' : 'binary');
+    console.log(`[fb-upload] chunk offset=${offset} size=${buffer.length} totalSize=${fileSize}`);
     const result = await uploadChunkToFacebook(uploadUrl, buffer, contentType, fileSize, offset, accessToken);
 
     return {
@@ -73,6 +79,7 @@ exports.handler = async (event) => {
       body: result || JSON.stringify({ success: true }),
     };
   } catch (err) {
+    console.error('[fb-upload] error:', err.message);
     return { statusCode: 500, body: JSON.stringify({ error: err.message }) };
   }
 };
