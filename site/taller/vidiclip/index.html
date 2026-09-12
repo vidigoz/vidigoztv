@@ -1708,23 +1708,34 @@ async function uploadToStorage(blob, filename, contentType='video/webm') {
     throw new Error('Faltan credenciales de R2 en Configuración');
   }
 
-  const res = await fetch('/.netlify/functions/r2', {
+  // 1) Pedimos a la function una URL PUT pre-firmada (el binario NO pasa por
+  //    la function — evita el límite de ~6MB de las Netlify Functions síncronas).
+  const presignRes = await fetch('/.netlify/functions/r2', {
     method:  'POST',
-    headers: {
-      'x-access-key':   accessKey,
-      'x-secret-key':   secretKey,
-      'x-endpoint':     endpoint,
-      'x-bucket':       'vidiclip-videos',
-      'x-filename':     filename,
-      'x-content-type': contentType,
-      'x-public-url':   publicURL,
-    },
-    body: blob,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      accessKey, secretKey, endpoint,
+      bucket:      'vidiclip-videos',
+      filename,
+      contentType,
+      publicUrl:   publicURL,
+    }),
   });
+  const presignData = await presignRes.json();
+  if (!presignRes.ok) throw new Error(presignData.error || `Presign failed: ${presignRes.status}`);
 
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || `Upload failed: ${res.status}`);
-  return data.url;
+  // 2) Subimos el binario directo del navegador a R2.
+  const putRes = await fetch(presignData.uploadUrl, {
+    method:  'PUT',
+    headers: { 'Content-Type': contentType },
+    body:    blob,
+  });
+  if (!putRes.ok) {
+    const errText = await putRes.text().catch(() => '');
+    throw new Error(`Subida a R2 falló: ${putRes.status} ${errText}`.trim());
+  }
+
+  return presignData.url;
 }
 
 async function notionPatch(endpoint, token, properties) {
