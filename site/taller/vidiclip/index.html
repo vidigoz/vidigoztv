@@ -37,6 +37,7 @@ body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color:
   height: 52px; background: var(--s1); border-bottom: 1px solid var(--border);
   flex-shrink: 0; padding: 0 20px; gap: 16px;
 }
+.topbar-left { display: flex; align-items: center; gap: 16px; min-width: 0; }
 .logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 17px; letter-spacing: -.5px; color: var(--accent); white-space: nowrap; }
 .logo span { color: var(--text); font-weight: 400; }
 .logo sub { font-size: 9px; color: var(--muted); font-weight: 400; vertical-align: super; margin-left: 2px; font-family: 'Instrument Sans', sans-serif; letter-spacing: .08em; }
@@ -59,6 +60,7 @@ body { font-family: 'Instrument Sans', sans-serif; background: var(--bg); color:
 .topbar-btn.primary:hover { background: #f0d050; }
 .topbar-btn.notion { background: rgba(255,255,255,.06); border-color: var(--border2); }
 .topbar-btn.notion:hover { background: rgba(255,255,255,.1); }
+.topbar-actions { display: flex; align-items: center; gap: 16px; }
 
 /* ── LAYOUT ── */
 .workspace { flex: 1; display: flex; overflow: hidden; }
@@ -258,12 +260,41 @@ input[type=datetime-local].fi { color-scheme: dark; }
    ══════════════════════════════════════════════════════ */
 .mobile-assets-btn { display: none; }
 .sheet-handle { display: none; }
+.settings-icon-only { display: none; }
 
 @media (max-width: 768px) {
   .mobile-assets-btn { display: flex; }
 
-  .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px; }
+  /* Two explicit rows: (logo/nav/badge …… settings) then (Assets | Notion | Exportar) */
+  .topbar {
+    display: grid; grid-template-columns: 1fr auto; align-items: center;
+    height: auto; padding: 8px 12px; gap: 8px;
+  }
   .story-title { display: none; }
+  .spacer { display: none; }
+
+  /* Row 1, left: logo + nav + badge, free to shrink if tight */
+  .topbar-left { grid-row: 1; grid-column: 1; min-width: 0; overflow: hidden; }
+
+  /* Settings becomes an icon-only button, top-right of row 1 */
+  .topbar-btn.settings-btn {
+    grid-row: 1; grid-column: 2;
+    width: 32px; height: 32px; padding: 0;
+    justify-content: center; flex-shrink: 0;
+  }
+  .topbar-btn.settings-btn .btn-label { display: none; }
+  .topbar-btn.settings-btn .settings-icon-only { display: block; font-size: 15px; }
+
+  /* Assets / Cargar Notion / Exportar: own row, same width/height, centered */
+  .topbar-actions {
+    grid-row: 2; grid-column: 1 / -1;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  }
+  .topbar-actions .topbar-btn {
+    width: 100%; height: 36px; padding: 0 6px;
+    justify-content: center; gap: 4px;
+    font-size: 11px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;
+  }
 
   .workspace { flex-direction: column; position: relative; overflow: visible; }
 
@@ -303,23 +334,27 @@ input[type=datetime-local].fi { color-scheme: dark; }
 
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
-  <div class="logo">VIDI<span>CLIP</span><sub>STORIES</sub></div>
-  <div class="divv"></div>
-  <div class="story-nav">
-    <button class="nav-btn" id="btnPrev" onclick="navigate(-1)" disabled title="Historia anterior">‹</button>
-    <span class="story-counter" id="storyCounter">— / —</span>
-    <button class="nav-btn" id="btnNext" onclick="navigate(1)" disabled title="Historia siguiente">›</button>
+  <div class="topbar-left">
+    <div class="logo">VIDI<span>CLIP</span><sub>STORIES</sub></div>
+    <div class="divv"></div>
+    <div class="story-nav">
+      <button class="nav-btn" id="btnPrev" onclick="navigate(-1)" disabled title="Historia anterior">‹</button>
+      <span class="story-counter" id="storyCounter">— / —</span>
+      <button class="nav-btn" id="btnNext" onclick="navigate(1)" disabled title="Historia siguiente">›</button>
+    </div>
+    <div class="story-title" id="topbarTitle">Sin historias cargadas</div>
+    <span class="status-badge sb-none" id="topbarBadge">—</span>
   </div>
-  <div class="story-title" id="topbarTitle">Sin historias cargadas</div>
-  <span class="status-badge sb-none" id="topbarBadge">—</span>
   <div class="spacer"></div>
-  <button class="topbar-btn notion mobile-assets-btn" onclick="toggleMobileAssets()">🎬 Assets</button>
-  <button class="topbar-btn notion" onclick="openSettings()">⚙ Configuración</button>
-  <button class="topbar-btn notion" onclick="loadFromNotion()">
-    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M4 5h6M4 7h4M4 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
-    Cargar Notion
-  </button>
-  <button class="topbar-btn primary" id="btnExport" onclick="exportVideo()" disabled>⬇ Exportar WebM</button>
+  <button class="topbar-btn notion settings-btn" onclick="openSettings()" title="Configuración"><span class="btn-label">⚙ Configuración</span><span class="settings-icon-only">⚙</span></button>
+  <div class="topbar-actions">
+    <button class="topbar-btn notion mobile-assets-btn" onclick="toggleMobileAssets()">🎬 Assets</button>
+    <button class="topbar-btn notion" onclick="loadFromNotion()">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="1" width="12" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><path d="M4 5h6M4 7h4M4 9h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+      Cargar Notion
+    </button>
+    <button class="topbar-btn primary" id="btnExport" onclick="exportVideo()" disabled>⬇ Exportar WebM</button>
+  </div>
 </div>
 
 <!-- ══ WORKSPACE ══ -->
