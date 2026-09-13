@@ -2174,7 +2174,13 @@ document.addEventListener('click', function(e) {
 function getCfg(key) { return localStorage.getItem('vdc_'+key) || ''; }
 function setCfg(key, val) { localStorage.setItem('vdc_'+key, val); }
 
-function isLocalOnly() { return localStorage.getItem('vdc_localOnly') === '1'; }
+// Default: modo local (no autopublicar a Meta) — el auto-upload vía Graph
+// API no logra el mismo tratamiento de audio/alcance que subir manualmente
+// desde Meta Business Suite (is_original_audio_reusable no está expuesto en
+// la API pública). Hasta resolverlo, Vidiclip solo genera el video/portada
+// y la publicación queda a mano. El usuario puede reactivar la nube con el
+// botón si igual quiere probar el auto-upload.
+function isLocalOnly() { return localStorage.getItem('vdc_localOnly') !== '0'; }
 
 function toggleLocalOnly() {
   const next = !isLocalOnly();
