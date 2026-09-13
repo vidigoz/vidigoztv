@@ -642,10 +642,16 @@ input[type=datetime-local].fi { color-scheme: dark; }
         <input type="text" class="fi" id="pubHashtags" value="#medieval #minihistoria #ficcion" placeholder="#historia #medieval #viral">
       </div>
       <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;">
+          <input type="checkbox" id="chkPublishNow" onchange="togglePublishNow()" style="accent-color:var(--accent);width:14px;height:14px;cursor:pointer;">
+          <span style="font-size:12px;font-weight:600;color:var(--muted2);">Publicar <strong style="color:var(--text);">inmediatamente</strong> (sin programar)</span>
+        </label>
+      </div>
+      <div class="field" id="scheduleDateField">
         <div class="fl">Programar para</div>
         <input type="datetime-local" class="fi" id="scheduleDate" oninput="syncScheduleEcho()">
       </div>
-      <div class="field">
+      <div class="field" id="suggestedTimesField">
         <div class="fl">Horarios sugeridos</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;">
           <button onclick="setSuggestedTime(0)" style="padding:4px 8px;background:var(--s2);border:1px solid var(--border);border-radius:5px;color:var(--muted2);cursor:pointer;font-size:10px;font-weight:600;" title="Domingo">Dom</button>
@@ -1675,7 +1681,8 @@ async function publishTo(platform) {
   const caption      = document.getElementById('pubCaption').value;
   const hashtags     = document.getElementById('pubHashtags').value;
   const fullCaption  = [caption, hashtags].filter(Boolean).join('\n\n');
-  const schedVal     = document.getElementById('scheduleDate').value;
+  const publishNow   = document.getElementById('chkPublishNow').checked;
+  const schedVal     = publishNow ? '' : document.getElementById('scheduleDate').value;
   const schedTS      = schedVal ? Math.floor(new Date(schedVal).getTime() / 1000) : null;
 
   try {
@@ -1774,7 +1781,7 @@ async function publishTo(platform) {
     // hubiera fallado, solo se registra en consola.
     if (story) {
       try {
-        await updateNotionStatus(story.id, 'Programado', schedVal || null);
+        await updateNotionStatus(story.id, schedTS ? 'Programado' : 'Publicado', schedVal || null);
       } catch(e) {
         console.warn('Notion no se pudo actualizar (la publicación en Meta sí fue exitosa):', e.message);
       }
@@ -2058,6 +2065,17 @@ function toggleScheduleExportDate() {
   const checked = document.getElementById('chkScheduleExport').checked;
   document.getElementById('scheduleExportDateWrap').style.display = checked ? 'block' : 'none';
   if (checked) syncScheduleEcho();
+}
+
+// Si "Publicar inmediatamente" está tildado, deshabilita visualmente la
+// fecha/horarios sugeridos e ignora lo que tengan tipeado (ver publishTo).
+function togglePublishNow() {
+  const now = document.getElementById('chkPublishNow').checked;
+  document.getElementById('scheduleDate').disabled = now;
+  document.getElementById('scheduleDateField').style.opacity = now ? '.4' : '1';
+  document.getElementById('suggestedTimesField').style.opacity = now ? '.4' : '1';
+  const btnFB = document.getElementById('btnPublishFB');
+  btnFB.textContent = now ? '📘 Publicar ahora en Facebook' : '📘 Programar en Facebook';
 }
 
 // Refleja en el panel de exportar la fecha del panel de Publicar, que es la
