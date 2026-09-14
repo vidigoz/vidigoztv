@@ -1,9 +1,9 @@
 // Lógica de envío compartida entre newsletter-send.js (manual, desde el dashboard)
 // y newsletter-cron.js (automático). Extraída para no duplicar código (columna 8 del plan).
-const { getPool } = require('./_db');
-const { getHistoriaById } = require('./_notion-historias');
-const { renderEmail } = require('./_email-template');
-const { sendEmail } = require('./_resend');
+const { getPool } = require('./db');
+const { getHistoriaById } = require('./notion-historias');
+const { renderEmail } = require('./email-template');
+const { sendEmail } = require('./resend');
 
 /**
  * Envía (o reanuda un envío parcial de) una historia de Notion a todos los suscriptores activos.

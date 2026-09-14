@@ -11,7 +11,7 @@
 // credenciales). Si no está configurado, el webhook sigue funcionando pero sin verificar
 // firma (documentado explícitamente — no bloquea el desarrollo mientras no exista el secret).
 const crypto = require('crypto');
-const { getPool } = require('./_db');
+const { getPool } = require('./_shared/db');
 
 function getWebhookSecret() {
   let secret = process.env.RESEND_WEBHOOK_SECRET || '';

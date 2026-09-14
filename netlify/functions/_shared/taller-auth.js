@@ -51,7 +51,14 @@ function isTallerAuthorized(event) {
 function unauthorizedResponse() {
   return {
     statusCode: 401,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      // Crítico: sin este header el navegador NO reintenta el fetch() con las
+      // credenciales que ya cacheó al autenticarse en /taller — se queda en 401
+      // silencioso y el dashboard nunca carga nada. Mismo realm que el edge
+      // function de /taller para que comparta la caché de credenciales del origen.
+      'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"',
+    },
     body: JSON.stringify({ error: 'No autorizado' }),
   };
 }

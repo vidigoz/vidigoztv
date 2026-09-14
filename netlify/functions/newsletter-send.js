@@ -4,11 +4,11 @@
 //   - Si se pasa notionPageId: crea (o reanuda) un envío para esa historia.
 //   - Si no se pasa nada: busca la próxima historia con Estado = Programado en Notion que
 //     no tenga ya un `sends` completado.
-const { getPool } = require('./_db');
-const { listHistorias } = require('./_notion-historias');
-const { sendNewsletterForPage } = require('./_send-logic');
-const { getSiteUrl } = require('./_site-url');
-const { isTallerAuthorized, unauthorizedResponse } = require('./_taller-auth');
+const { getPool } = require('./_shared/db');
+const { listHistorias } = require('./_shared/notion-historias');
+const { sendNewsletterForPage } = require('./_shared/send-logic');
+const { getSiteUrl } = require('./_shared/site-url');
+const { isTallerAuthorized, unauthorizedResponse } = require('./_shared/taller-auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {

@@ -4,8 +4,8 @@
 // POST { email, nombre? } → alta manual, entra directo como status=active
 // POST { emails: [...] }  → import en lote (lista/CSV pegado), todos entran como active
 const crypto = require('crypto');
-const { getPool } = require('./_db');
-const { isTallerAuthorized, unauthorizedResponse } = require('./_taller-auth');
+const { getPool } = require('./_shared/db');
+const { isTallerAuthorized, unauthorizedResponse } = require('./_shared/taller-auth');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 

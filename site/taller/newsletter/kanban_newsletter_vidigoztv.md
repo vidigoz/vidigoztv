@@ -144,10 +144,10 @@ Cómo usar este documento: cada `##` es una columna del kanban. Cada `- [ ]` es 
 ## Columna 8 — Cron (Netlify Scheduled Functions)
 
 - [x] Crear `netlify/functions/newsletter-cron.js` — el resto del repo usa CommonJS (`exports.handler`), así que el schedule se declaró en `netlify.toml` (`[functions."newsletter-cron"] schedule = "0 9 * * *"`) en vez de `export const config` (sintaxis ESM de Functions v2), para mantener consistencia con el resto del código — mismo resultado, 9am UTC ≈ 3am Tecate
-- [x] Lógica: busca en `sends` lo que tenga `scheduled_at <= now() AND sent = false`; si no hay nada, revisa Notion por `Estado = Programado` sin envío completado (ver decisión de adaptación en columna 6) y envía la más antigua por `Fecha de Publicacion`, una por corrida
-- [x] Reutiliza la misma lógica de `newsletter-send.js` vía `_send-logic.js` (función compartida `sendNewsletterForPage`), sin duplicar código
+- [x] Lógica (revisada tras auditoría — ver nota abajo): busca en `sends` lo que tenga `scheduled_at <= now() AND sent = false` y lo envía; si no hay nada programado, **no hace nada esa noche**. Ya no elige sola una historia "Programado" de Notion cuando no hay `scheduled_at` — eso habría disparado envíos reales a toda la lista sin que el usuario lo pidiera ese día, en cuanto hubiera `RESEND_API_KEY` configurada. Decisión confirmada explícitamente con el usuario.
+- [x] Reutiliza la misma lógica de `newsletter-send.js` vía `_shared/send-logic.js` (función compartida `sendNewsletterForPage`), sin duplicar código
 - [x] Logging: usa `console.log`/`console.error`, capturado automáticamente por Netlify en el dashboard de Functions
-- [ ] Probar: programar algo desde el dashboard antes de dormir, confirmar en la mañana que salió solo — NO probado en producción real (requiere deploy a Netlify + RESEND_API_KEY); sí se probó la función `newsletter-cron.js` invocada directamente en local contra Postgres/Notion reales, comportándose como se espera
+- [x] Probado invocando `newsletter-cron.js` directo en local contra Postgres/Notion reales: con la lista de `sends` programados vacía, responde `{ran:false, reason:'Nada programado'}` sin enviar nada — comportamiento seguro confirmado. El escenario "hay algo programado y vencido → se envía" se prueba manualmente igual que "Enviar ahora" (mismo código compartido); el disparo automático en producción real (Netlify Scheduled Function ejecutando sola de madrugada) no se puede probar sin desplegar, queda pendiente de observar tras el primer deploy.
 
 ---
 

@@ -3,9 +3,9 @@
 // confirmación vía Resend. Mantiene el mismo contrato request/response que el form
 // de index.html ya espera: POST {email, nombre, origen} → {success, alreadySubscribed}.
 const crypto = require('crypto');
-const { getPool } = require('./_db');
-const { sendEmail } = require('./_resend');
-const { getSiteUrl } = require('./_site-url');
+const { getPool } = require('./_shared/db');
+const { sendEmail } = require('./_shared/resend');
+const { getSiteUrl } = require('./_shared/site-url');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_ORIGENES = ['historias.html', 'index.html', 'manual', 'otro'];

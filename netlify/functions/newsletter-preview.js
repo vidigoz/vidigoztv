@@ -1,10 +1,10 @@
 // GET /.netlify/functions/newsletter-preview?pageId=XXX
 // Trae el contenido de una historia de Notion y lo devuelve como el HTML final del correo
 // (con un link de baja de ejemplo, ya que no hay un destinatario real en la vista previa).
-const { getHistoriaById } = require('./_notion-historias');
-const { renderEmail } = require('./_email-template');
-const { getSiteUrl } = require('./_site-url');
-const { isTallerAuthorized, unauthorizedResponse } = require('./_taller-auth');
+const { getHistoriaById } = require('./_shared/notion-historias');
+const { renderEmail } = require('./_shared/email-template');
+const { getSiteUrl } = require('./_shared/site-url');
+const { isTallerAuthorized, unauthorizedResponse } = require('./_shared/taller-auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {

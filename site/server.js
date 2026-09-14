@@ -696,7 +696,7 @@ function renderEmailLocal({ titulo, cuerpo, imagenUrl, unsubscribeLink, siteUrl 
 
 // ── /newsletter-notion-list ──
 async function handleNewsletterNotionList(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   try {
     const historias = await listHistoriasProgramadoLocal();
     const db = getPgPool();
@@ -717,7 +717,7 @@ async function handleNewsletterNotionList(req, res) {
 
 // ── /newsletter-preview ──
 async function handleNewsletterPreview(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const qs = new URL(req.url, 'http://localhost').searchParams;
   const pageId = qs.get('pageId');
   if (!pageId) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Falta pageId' })); return; }
@@ -794,7 +794,7 @@ async function sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl }) {
 // ── /newsletter-send ──
 async function handleNewsletterSend(req, res) {
   if (req.method !== 'POST') { res.writeHead(405); res.end('Method Not Allowed'); return; }
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
 
   let body = {};
   try { body = JSON.parse(await readRequestBody(req) || '{}'); }
@@ -835,7 +835,7 @@ async function handleNewsletterSend(req, res) {
 
 // ── /newsletter-sends (programar / cancelar / listar) ──
 async function handleNewsletterSends(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const db = getPgPool();
 
   if (req.method === 'GET') {
@@ -931,7 +931,7 @@ function csvEscapeLocal(v) {
 }
 
 async function handleNewsletterSubscribers(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const db = getPgPool();
 
   if (req.method === 'GET') {

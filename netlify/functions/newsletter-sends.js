@@ -3,8 +3,8 @@
 // GET  ?scope=history    → sends ya enviados, con open/click rate (pantalla "Historial")
 // POST { action: 'schedule', notionPageId, scheduledAt, subject? } → crea/actualiza fila en sends
 // POST { action: 'cancel', sendId } → scheduled_at = NULL (vuelve a manual)
-const { getPool } = require('./_db');
-const { isTallerAuthorized, unauthorizedResponse } = require('./_taller-auth');
+const { getPool } = require('./_shared/db');
+const { isTallerAuthorized, unauthorizedResponse } = require('./_shared/taller-auth');
 
 async function withRates(db, sends) {
   const ids = sends.map((s) => s.id);

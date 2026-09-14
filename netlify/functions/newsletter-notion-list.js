@@ -1,9 +1,9 @@
 // GET /.netlify/functions/newsletter-notion-list
 // Lista páginas de Notion (Estado = Programado, las candidatas a newsletter) con su estado
 // de envío en Postgres (sends), para la pantalla "Historias" del dashboard.
-const { getPool } = require('./_db');
-const { listHistorias } = require('./_notion-historias');
-const { isTallerAuthorized, unauthorizedResponse } = require('./_taller-auth');
+const { getPool } = require('./_shared/db');
+const { listHistorias } = require('./_shared/notion-historias');
+const { isTallerAuthorized, unauthorizedResponse } = require('./_shared/taller-auth');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {

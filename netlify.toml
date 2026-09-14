@@ -46,3 +46,12 @@
   [headers.values]
     X-Frame-Options = "DENY"
     X-Content-Type-Options = "nosniff"
+
+# El dashboard de newsletter muestra la vista previa del correo en un iframe
+# same-origin (columna 11 del kanban). DENY global bloquea incluso ese caso;
+# SAMEORIGIN permite que el propio sitio se enmarque a sí mismo sin abrir la
+# puerta a que un sitio externo lo haga (sigue bloqueado para terceros).
+[[headers]]
+  for = "/.netlify/functions/newsletter-preview"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"

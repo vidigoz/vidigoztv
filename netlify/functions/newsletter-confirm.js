@@ -1,7 +1,7 @@
 // GET /.netlify/functions/newsletter-confirm?token=XXX
 // Confirma un opt-in: pasa el suscriptor de pending → active y redirige a una
 // página bonita del sitio.
-const { getPool } = require('./_db');
+const { getPool } = require('./_shared/db');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {

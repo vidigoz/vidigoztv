@@ -1,6 +1,6 @@
 // GET /.netlify/functions/newsletter-unsubscribe?token=XXX
 // Baja instantánea, sin fricción ni preguntas — redirige a una página de confirmación simple.
-const { getPool } = require('./_db');
+const { getPool } = require('./_shared/db');
 
 exports.handler = async (event) => {
   if (event.httpMethod !== 'GET') {
