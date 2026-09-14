@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Newsletter — Taller VidigozTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #050410;
+    color: #f2efe9;
+    font-family: 'Manrope', system-ui, sans-serif;
+    min-height: 100vh;
+  }
+  .page { max-width: 1000px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  .header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 24px; }
+  .title { font: 700 24px 'Space Grotesk', sans-serif; letter-spacing: .04em; }
+  .back-link { color: rgba(255,255,255,.4); font-size: 13px; text-decoration: none; transition: color .2s; }
+  .back-link:hover { color: #e2632f; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; border-bottom: 1px solid rgba(255,255,255,.08); }
+  .tab {
+    background: none; border: none; color: rgba(255,255,255,.45);
+    font: 600 13.5px 'Manrope', sans-serif; padding: 10px 4px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .2s, border-color .2s;
+  }
+  .tab:hover { color: #f2efe9; }
+  .tab.active { color: #e2632f; border-bottom-color: #e2632f; }
+
+  .panel { background: #16142a; border-radius: 18px; padding: 22px 20px; margin-bottom: 20px; }
+  .panel-title { font: 600 15px 'Space Grotesk', sans-serif; margin-bottom: 16px; }
+
+  .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .kpi-card { background: #16142a; border-radius: 16px; padding: 16px 18px; }
+  .kpi-value { font: 700 24px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .kpi-label { font-size: 11.5px; color: rgba(255,255,255,.45); margin-top: 4px; }
+
+  .empty { color: rgba(255,255,255,.35); font-size: 13px; padding: 24px 0; text-align: center; }
+  .loading { color: rgba(255,255,255,.35); font-size: 14px; text-align: center; padding: 40px 0; }
+
+  .list-item {
+    display: flex; align-items: center; gap: 14px; justify-content: space-between;
+    padding: 13px 4px; border-bottom: 1px solid rgba(255,255,255,.06); flex-wrap: wrap;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .li-main { flex: 1; min-width: 180px; }
+  .li-title { font: 600 14px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .li-sub { font-size: 12px; color: rgba(255,255,255,.4); margin-top: 3px; }
+  .li-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+  .badge { display: inline-block; font: 600 10.5px 'Manrope', sans-serif; padding: 3px 9px; border-radius: 20px; text-transform: uppercase; letter-spacing: .03em; }
+  .badge.programado { background: rgba(226,99,47,.15); color: #e2632f; }
+  .badge.enviado { background: rgba(78,202,139,.15); color: #4eca8b; }
+  .badge.pendiente { background: rgba(255,255,255,.08); color: rgba(255,255,255,.55); }
+  .badge.active { background: rgba(78,202,139,.15); color: #4eca8b; }
+  .badge.pending { background: rgba(226,99,47,.15); color: #e2632f; }
+  .badge.unsubscribed { background: rgba(255,255,255,.08); color: rgba(255,255,255,.4); }
+  .badge.bounced { background: rgba(232,84,84,.15); color: #e85454; }
+
+  button.btn {
+    background: #e2632f; color: #050410; border: none; border-radius: 9px;
+    font: 700 12.5px 'Manrope', sans-serif; padding: 8px 16px; cursor: pointer;
+    transition: transform .15s ease, opacity .15s ease;
+  }
+  button.btn:hover { transform: scale(1.03); }
+  button.btn:active { transform: scale(.97); }
+  button.btn:disabled { opacity: .5; cursor: default; transform: none; }
+  button.btn.secondary { background: #0c0a1c; color: #f2efe9; border: 1px solid rgba(255,255,255,.12); }
+  button.btn.danger { background: rgba(232,84,84,.12); color: #e85454; }
+  button.btn.small { padding: 6px 12px; font-size: 11.5px; }
+
+  input, textarea, select {
+    background: #0c0a1c; border: 1px solid rgba(255,255,255,.1); color: #f2efe9;
+    font: 500 13px 'Manrope', sans-serif; padding: 10px 12px; border-radius: 9px;
+    outline: none; width: 100%;
+  }
+  input:focus, textarea:focus, select:focus { border-color: #e2632f; }
+  textarea { resize: vertical; min-height: 90px; font-family: 'Manrope', monospace; }
+  label.field-label { display: block; font: 600 12px 'Manrope', sans-serif; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+  .field { margin-bottom: 14px; }
+  .field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field-row > .field { flex: 1; min-width: 180px; }
+
+  .msg { font: 500 12.5px 'Manrope', sans-serif; margin-top: 10px; }
+  .msg.ok { color: #4eca8b; }
+  .msg.err { color: #e85454; }
+
+  .modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.6); display: flex;
+    align-items: center; justify-content: center; padding: 20px; z-index: 50;
+  }
+  .modal {
+    background: #16142a; border-radius: 18px; padding: 24px; max-width: 700px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
+  .modal-title { font: 700 17px 'Space Grotesk', sans-serif; }
+  .modal-close { background: none; border: none; color: rgba(255,255,255,.5); font-size: 22px; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: #f2efe9; }
+  .preview-frame { width: 100%; height: 460px; border: none; border-radius: 12px; background: #050410; margin-bottom: 16px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; color: rgba(255,255,255,.4); font-weight: 500; padding: 7px 8px; border-bottom: 1px solid rgba(255,255,255,.08); }
+  td { padding: 8px; border-bottom: 1px solid rgba(255,255,255,.04); color: rgba(255,255,255,.75); }
+  .table-wrap { overflow-x: auto; }
+  tr:last-child td { border-bottom: none; }
+
+  .subscribers-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+
+  @media (max-width: 640px) {
+    .li-actions { width: 100%; justify-content: flex-start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="title">Newsletter</div>
+      <a class="back-link" href="/taller">← Volver al taller</a>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="historias">Historias</button>
+    <button class="tab" data-tab="programados">Programados</button>
+    <button class="tab" data-tab="historial">Historial</button>
+    <button class="tab" data-tab="suscriptores">Suscriptores</button>
+  </div>
+
+  <div id="content">
+    <div class="loading">Cargando…</div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script>
+const content = document.getElementById('content');
+const modalRoot = document.getElementById('modalRoot');
+const tabs = document.querySelectorAll('.tab');
+
+function escapeHtml(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function fmtDate(iso) {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleString('es-MX', { dateStyle: 'medium', timeStyle: 'short' });
+}
+function pct(n) { return `${Math.round((n || 0) * 100)}%`; }
+
+async function apiGet(url) {
+  const res = await fetch(url);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+async function apiPost(url, body) {
+  const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function closeModal() { modalRoot.innerHTML = ''; }
+
+// ══════════════════════════ TAB: HISTORIAS ══════════════════════════
+async function renderHistorias() {
+  content.innerHTML = '<div class="loading">Cargando historias…</div>';
+  try {
+    const { historias } = await apiGet('/.netlify/functions/newsletter-notion-list');
+
+    if (historias.length === 0) {
+      content.innerHTML = '<div class="panel"><div class="empty">No hay historias con Estado = Programado en Notion.</div></div>';
+      return;
+    }
+
+    content.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Historias listas para enviar (Estado = Programado en Notion)</div>
+        <div id="historiasList">
+          ${historias.map((h) => {
+            let badge = '<span class="badge pendiente">Sin enviar</span>';
+            if (h.send && h.send.sent) badge = `<span class="badge enviado">Enviado a ${h.send.recipients_count}</span>`;
+            else if (h.send && h.send.scheduled_at) badge = `<span class="badge programado">Programado ${fmtDate(h.send.scheduled_at)}</span>`;
+            return `
+              <div class="list-item" data-id="${h.id}">
+                <div class="li-main">
+                  <div class="li-title">${escapeHtml(h.titulo || '(sin título)')}</div>
+                  <div class="li-sub">${badge} · editado ${fmtDate(h.lastEditedTime)}</div>
+                </div>
+                <div class="li-actions">
+                  <button class="btn secondary small" data-action="preview" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Vista previa</button>
+                  ${!(h.send && h.send.sent) ? `
+                    <button class="btn small" data-action="send-now" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Enviar ahora</button>
+                    <button class="btn secondary small" data-action="schedule" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Programar</button>
+                  ` : ''}
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+
+    content.querySelectorAll('[data-action="preview"]').forEach((btn) => {
+      btn.addEventListener('click', () => openPreviewModal(btn.dataset.id, btn.dataset.titulo));
+    });
+    content.querySelectorAll('[data-action="send-now"]').forEach((btn) => {
+      btn.addEventListener('click', () => openSendNowModal(btn.dataset.id, btn.dataset.titulo));
+    });
+    content.querySelectorAll('[data-action="schedule"]').forEach((btn) => {
+      btn.addEventListener('click', () => openScheduleModal(btn.dataset.id, btn.dataset.titulo));
+    });
+  } catch (err) {
+    content.innerHTML = `<div class="panel"><div class="empty">No se pudieron cargar las historias: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+function openPreviewModal(pageId, titulo) {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal">
+        <div class="modal-header">
+          <div class="modal-title">Vista previa — ${escapeHtml(titulo)}</div>
+          <button class="modal-close" id="closeBtn">&times;</button>
+        </div>
+        <iframe class="preview-frame" src="/.netlify/functions/newsletter-preview?pageId=${encodeURIComponent(pageId)}"></iframe>
+        <div class="li-actions">
+          <button class="btn" data-action="send-now" data-id="${pageId}" data-titulo="${escapeHtml(titulo)}">Enviar ahora</button>
+          <button class="btn secondary" data-action="schedule" data-id="${pageId}" data-titulo="${escapeHtml(titulo)}">Programar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  modalRoot.querySelector('[data-action="send-now"]').addEventListener('click', () => { closeModal(); openSendNowModal(pageId, titulo); });
+  modalRoot.querySelector('[data-action="schedule"]').addEventListener('click', () => { closeModal(); openScheduleModal(pageId, titulo); });
+}
+
+function openSendNowModal(pageId, titulo) {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+          <div class="modal-title">Enviar ahora</div>
+          <button class="modal-close" id="closeBtn">&times;</button>
+        </div>
+        <p style="font-size:13.5px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:16px;">
+          Se enviará <strong>${escapeHtml(titulo)}</strong> a todos los suscriptores activos. Esta acción no se puede deshacer.
+        </p>
+        <div id="sendMsg" class="msg"></div>
+        <div class="li-actions">
+          <button class="btn" id="confirmSend">Confirmar envío</button>
+          <button class="btn secondary" id="cancelSend">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('cancelSend').addEventListener('click', closeModal);
+  document.getElementById('confirmSend').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmSend');
+    const msg = document.getElementById('sendMsg');
+    btn.disabled = true; btn.textContent = 'Enviando…';
+    try {
+      const result = await apiPost('/.netlify/functions/newsletter-send', { notionPageId: pageId });
+      msg.className = 'msg ok';
+      msg.textContent = `Enviado a ${result.sentCount} de ${result.sentCount + result.errorCount} suscriptores${result.errorCount ? ` (${result.errorCount} con error — revisa que RESEND_API_KEY esté configurado)` : ''}.`;
+      setTimeout(() => { closeModal(); renderHistorias(); }, 1800);
+    } catch (err) {
+      msg.className = 'msg err';
+      msg.textContent = err.message;
+      btn.disabled = false; btn.textContent = 'Confirmar envío';
+    }
+  });
+}
+
+function openScheduleModal(pageId, titulo) {
+  const now = new Date(Date.now() + 60 * 60 * 1000);
+  const defaultVal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+          <div class="modal-title">Programar envío</div>
+          <button class="modal-close" id="closeBtn">&times;</button>
+        </div>
+        <p style="font-size:13.5px;color:rgba(255,255,255,.6);margin-bottom:14px;">${escapeHtml(titulo)}</p>
+        <div class="field">
+          <label class="field-label">Fecha y hora</label>
+          <input type="datetime-local" id="scheduledAt" value="${defaultVal}">
+        </div>
+        <div id="scheduleMsg" class="msg"></div>
+        <div class="li-actions">
+          <button class="btn" id="confirmSchedule">Programar</button>
+          <button class="btn secondary" id="cancelSchedule">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('cancelSchedule').addEventListener('click', closeModal);
+  document.getElementById('confirmSchedule').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmSchedule');
+    const msg = document.getElementById('scheduleMsg');
+    const val = document.getElementById('scheduledAt').value;
+    if (!val) { msg.className = 'msg err'; msg.textContent = 'Elige una fecha y hora.'; return; }
+    btn.disabled = true; btn.textContent = 'Programando…';
+    try {
+      await apiPost('/.netlify/functions/newsletter-sends', { action: 'schedule', notionPageId: pageId, scheduledAt: new Date(val).toISOString(), subject: titulo });
+      msg.className = 'msg ok';
+      msg.textContent = 'Programado correctamente.';
+      setTimeout(() => { closeModal(); renderHistorias(); }, 1200);
+    } catch (err) {
+      msg.className = 'msg err';
+      msg.textContent = err.message;
+      btn.disabled = false; btn.textContent = 'Programar';
+    }
+  });
+}
+
+// ══════════════════════════ TAB: PROGRAMADOS ══════════════════════════
+async function renderProgramados() {
+  content.innerHTML = '<div class="loading">Cargando…</div>';
+  try {
+    const { sends } = await apiGet('/.netlify/functions/newsletter-sends?scope=scheduled');
+    if (sends.length === 0) {
+      content.innerHTML = '<div class="panel"><div class="empty">No hay envíos programados.</div></div>';
+      return;
+    }
+    content.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Envíos programados</div>
+        <div>
+          ${sends.map((s) => `
+            <div class="list-item" data-id="${s.id}">
+              <div class="li-main">
+                <div class="li-title">${escapeHtml(s.subject || '(sin asunto)')}</div>
+                <div class="li-sub">Se enviará ${fmtDate(s.scheduled_at)}</div>
+              </div>
+              <div class="li-actions">
+                <button class="btn danger small" data-action="cancel" data-id="${s.id}">Cancelar programación</button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+    content.querySelectorAll('[data-action="cancel"]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true; btn.textContent = 'Cancelando…';
+        try {
+          await apiPost('/.netlify/functions/newsletter-sends', { action: 'cancel', sendId: btn.dataset.id });
+          renderProgramados();
+        } catch (err) {
+          alert('Error: ' + err.message);
+          btn.disabled = false; btn.textContent = 'Cancelar programación';
+        }
+      });
+    });
+  } catch (err) {
+    content.innerHTML = `<div class="panel"><div class="empty">Error: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+// ══════════════════════════ TAB: HISTORIAL ══════════════════════════
+async function renderHistorial() {
+  content.innerHTML = '<div class="loading">Cargando…</div>';
+  try {
+    const { sends } = await apiGet('/.netlify/functions/newsletter-sends?scope=history');
+    if (sends.length === 0) {
+      content.innerHTML = '<div class="panel"><div class="empty">Aún no se ha enviado ningún correo.</div></div>';
+      return;
+    }
+    content.innerHTML = `
+      <div class="panel">
+        <div class="panel-title">Historial de envíos</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Fecha</th><th>Asunto</th><th>Destinatarios</th><th>Rebotes</th><th>Quejas</th><th>Open rate</th><th>Click rate</th></tr></thead>
+            <tbody>
+              ${sends.map((s) => `
+                <tr>
+                  <td>${fmtDate(s.sent_at)}</td>
+                  <td>${escapeHtml(s.subject || '—')}</td>
+                  <td>${s.recipients_count}</td>
+                  <td>${s.stats.bounced}</td>
+                  <td>${s.stats.complained}</td>
+                  <td>${pct(s.stats.openRate)}</td>
+                  <td>${pct(s.stats.clickRate)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <p style="font-size:11.5px;color:rgba(255,255,255,.35);margin-top:14px;line-height:1.6;">
+          Nota: Apple Mail precarga el pixel de apertura automáticamente — el open rate puede estar inflado si buena parte de la lista usa Mail/iPhone. Click rate es más confiable.
+        </p>
+      </div>
+    `;
+  } catch (err) {
+    content.innerHTML = `<div class="panel"><div class="empty">Error: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+// ══════════════════════════ TAB: SUSCRIPTORES ══════════════════════════
+async function renderSuscriptores() {
+  content.innerHTML = '<div class="loading">Cargando…</div>';
+  try {
+    const { subscribers, total, countByStatus } = await apiGet('/.netlify/functions/newsletter-subscribers');
+
+    content.innerHTML = `
+      <div class="kpi-row">
+        <div class="kpi-card"><div class="kpi-value">${total}</div><div class="kpi-label">Total</div></div>
+        <div class="kpi-card"><div class="kpi-value">${countByStatus.active || 0}</div><div class="kpi-label">Activos</div></div>
+        <div class="kpi-card"><div class="kpi-value">${countByStatus.pending || 0}</div><div class="kpi-label">Pendientes</div></div>
+        <div class="kpi-card"><div class="kpi-value">${countByStatus.unsubscribed || 0}</div><div class="kpi-label">Bajas</div></div>
+        <div class="kpi-card"><div class="kpi-value">${countByStatus.bounced || 0}</div><div class="kpi-label">Rebotados</div></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Agregar suscriptores</div>
+        <div class="subscribers-toolbar">
+          <button class="btn" id="openAddOne">+ Agregar uno</button>
+          <button class="btn secondary" id="openImport">Importar lista / CSV</button>
+          <a class="btn secondary" style="text-decoration:none;display:inline-flex;align-items:center;" href="/.netlify/functions/newsletter-subscribers?format=csv">Exportar CSV de activos</a>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-title">Lista de suscriptores</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Email</th><th>Nombre</th><th>Estado</th><th>Origen</th><th>Alta</th></tr></thead>
+            <tbody>
+              ${subscribers.length === 0 ? '<tr><td colspan="5" class="empty">Sin suscriptores aún.</td></tr>' : subscribers.map((s) => `
+                <tr>
+                  <td>${escapeHtml(s.email)}</td>
+                  <td>${escapeHtml(s.nombre || '—')}</td>
+                  <td><span class="badge ${s.status}">${s.status}</span></td>
+                  <td>${escapeHtml(s.origen || '—')}</td>
+                  <td>${fmtDate(s.created_at)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('openAddOne').addEventListener('click', openAddOneModal);
+    document.getElementById('openImport').addEventListener('click', openImportModal);
+  } catch (err) {
+    content.innerHTML = `<div class="panel"><div class="empty">Error: ${escapeHtml(err.message)}</div></div>`;
+  }
+}
+
+function openAddOneModal() {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal" style="max-width:420px;">
+        <div class="modal-header">
+          <div class="modal-title">Agregar suscriptor</div>
+          <button class="modal-close" id="closeBtn">&times;</button>
+        </div>
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input type="email" id="addEmail" placeholder="correo@ejemplo.com">
+        </div>
+        <div class="field">
+          <label class="field-label">Nombre (opcional)</label>
+          <input type="text" id="addNombre" placeholder="Nombre">
+        </div>
+        <div id="addMsg" class="msg"></div>
+        <div class="li-actions">
+          <button class="btn" id="confirmAdd">Agregar</button>
+          <button class="btn secondary" id="cancelAdd">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('cancelAdd').addEventListener('click', closeModal);
+  document.getElementById('confirmAdd').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmAdd');
+    const msg = document.getElementById('addMsg');
+    const email = document.getElementById('addEmail').value.trim();
+    const nombre = document.getElementById('addNombre').value.trim();
+    if (!email) { msg.className = 'msg err'; msg.textContent = 'Escribe un email.'; return; }
+    btn.disabled = true; btn.textContent = 'Agregando…';
+    try {
+      await apiPost('/.netlify/functions/newsletter-subscribers', { email, nombre });
+      msg.className = 'msg ok'; msg.textContent = 'Agregado.';
+      setTimeout(() => { closeModal(); renderSuscriptores(); }, 900);
+    } catch (err) {
+      msg.className = 'msg err'; msg.textContent = err.message;
+      btn.disabled = false; btn.textContent = 'Agregar';
+    }
+  });
+}
+
+function openImportModal() {
+  modalRoot.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal" style="max-width:480px;">
+        <div class="modal-header">
+          <div class="modal-title">Importar lista de correos</div>
+          <button class="modal-close" id="closeBtn">&times;</button>
+        </div>
+        <div class="field">
+          <label class="field-label">Pega los emails (uno por línea, o separados por coma)</label>
+          <textarea id="importText" placeholder="uno@ejemplo.com&#10;dos@ejemplo.com"></textarea>
+        </div>
+        <div id="importMsg" class="msg"></div>
+        <div class="li-actions">
+          <button class="btn" id="confirmImport">Importar</button>
+          <button class="btn secondary" id="cancelImport">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') closeModal(); });
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  document.getElementById('cancelImport').addEventListener('click', closeModal);
+  document.getElementById('confirmImport').addEventListener('click', async () => {
+    const btn = document.getElementById('confirmImport');
+    const msg = document.getElementById('importMsg');
+    const raw = document.getElementById('importText').value;
+    const emails = raw.split(/[\n,;]+/).map((s) => s.trim()).filter(Boolean);
+    if (emails.length === 0) { msg.className = 'msg err'; msg.textContent = 'Pega al menos un email.'; return; }
+    btn.disabled = true; btn.textContent = 'Importando…';
+    try {
+      const result = await apiPost('/.netlify/functions/newsletter-subscribers', { emails });
+      msg.className = 'msg ok';
+      msg.textContent = `${result.added} agregados, ${result.skipped} ya existían, ${result.invalid} inválidos.`;
+      setTimeout(() => { closeModal(); renderSuscriptores(); }, 1600);
+    } catch (err) {
+      msg.className = 'msg err'; msg.textContent = err.message;
+      btn.disabled = false; btn.textContent = 'Importar';
+    }
+  });
+}
+
+// ══════════════════════════ Navegación de tabs ══════════════════════════
+const renderers = {
+  historias: renderHistorias,
+  programados: renderProgramados,
+  historial: renderHistorial,
+  suscriptores: renderSuscriptores,
+};
+
+tabs.forEach((tab) => {
+  tab.addEventListener('click', () => {
+    tabs.forEach((t) => t.classList.remove('active'));
+    tab.classList.add('active');
+    closeModal();
+    renderers[tab.dataset.tab]();
+  });
+});
+
+renderHistorias();
+</script>
+
+</body>
+</html>

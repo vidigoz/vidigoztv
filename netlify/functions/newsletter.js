@@ -1,39 +1,39 @@
-const { Client } = require('@notionhq/client');
+// Alta de suscriptores (double opt-in) — reemplaza la versión anterior que escribía
+// directo a Notion. Ahora escribe en Postgres (subscribers) y dispara un correo de
+// confirmación vía Resend. Mantiene el mismo contrato request/response que el form
+// de index.html ya espera: POST {email, nombre, origen} → {success, alreadySubscribed}.
+const crypto = require('crypto');
+const { getPool } = require('./_db');
+const { sendEmail } = require('./_resend');
+const { getSiteUrl } = require('./_site-url');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_ORIGENES = ['historias.html', 'index.html', 'otro'];
+const VALID_ORIGENES = ['historias.html', 'index.html', 'manual', 'otro'];
 
-function getNotionConfig() {
-  let dbId = process.env.newsletter_db_id || '';
-  let token = process.env.integration_token || '';
-
-  if (!dbId || !token) {
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const envPath = path.join(__dirname, '..', '..', '.env');
-      const envContent = fs.readFileSync(envPath, 'utf8');
-      if (!dbId) {
-        const m = envContent.match(/^newsletter_db_id\s*=\s*(.+)$/m);
-        if (m) dbId = m[1].trim();
-      }
-      if (!token) {
-        const m = envContent.match(/^integration_token\s*=\s*(.+)$/m);
-        if (m) token = m[1].trim();
-      }
-    } catch {
-      // sin .env disponible — se queda con env vars
-    }
-  }
-
-  return { dbId, token };
-}
-
-function formatDbId(raw) {
-  const id = raw.replace(/-/g, '');
-  return id.length === 32
-    ? `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20)}`
-    : raw;
+function confirmEmailHtml({ nombre, confirmLink, siteUrl }) {
+  const saludo = nombre ? `Hola ${nombre},` : 'Hola,';
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Confirma tu suscripción</title></head>
+<body style="margin:0;padding:0;background-color:#050410;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#050410;">
+  <tr><td align="center" style="padding:32px 16px;">
+    <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:100%;max-width:480px;">
+      <tr><td style="padding:0 0 24px;text-align:center;">
+        <span style="font-family:'Space Grotesk',Arial,sans-serif;font-weight:700;font-size:18px;letter-spacing:.12em;color:#f2efe9;">VIDIGOZTV</span>
+        <div style="width:40px;height:2px;background-color:#e2632f;margin:10px auto 0;border-radius:1px;"></div>
+      </td></tr>
+      <tr><td style="background-color:#16142a;border-radius:18px;padding:28px 26px;text-align:center;">
+        <h1 style="margin:0 0 14px;font-family:'Space Grotesk',Arial,sans-serif;font-weight:700;font-size:20px;color:#f2efe9;">Confirma tu suscripción</h1>
+        <p style="margin:0 0 20px;font-family:'Manrope',Arial,sans-serif;font-size:14.5px;line-height:1.6;color:rgba(242,239,233,.75);">${saludo} falta un paso para recibir las historias de VidigozTV en tu correo.</p>
+        <a href="${confirmLink}" style="display:inline-block;background-color:#e2632f;color:#050410;font-family:'Manrope',Arial,sans-serif;font-weight:700;font-size:14px;text-decoration:none;padding:12px 28px;border-radius:10px;">Confirmar suscripción</a>
+        <p style="margin:20px 0 0;font-family:'Manrope',Arial,sans-serif;font-size:11.5px;color:rgba(242,239,233,.4);">Si no fuiste tú, ignora este correo.</p>
+      </td></tr>
+    </table>
+  </td></tr>
+</table>
+</body>
+</html>`;
 }
 
 exports.handler = async (event) => {
@@ -53,33 +53,68 @@ exports.handler = async (event) => {
     return { statusCode: 400, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ error: 'Email inválido' }) };
   }
 
-  const { dbId, token } = getNotionConfig();
-  if (!dbId || !token) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Faltan credenciales de Notion en el servidor' }) };
-  }
-
-  const notion = new Client({ auth: token });
-  const database_id = formatDbId(dbId);
+  const db = getPool();
+  const siteUrl = getSiteUrl(event);
 
   try {
-    const existing = await notion.databases.query({
-      database_id,
-      filter: { property: 'Email', title: { equals: email } },
-      page_size: 1,
-    });
+    const existing = await db.query('SELECT id, status, confirm_token FROM subscribers WHERE email = $1', [email]);
 
-    if (existing.results.length > 0) {
-      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ success: true, alreadySubscribed: true }) };
+    if (existing.rows.length > 0) {
+      const row = existing.rows[0];
+
+      if (row.status === 'active') {
+        // Ya confirmado — éxito sin fricción, sin reenviar nada.
+        return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ success: true, alreadySubscribed: true }) };
+      }
+
+      // pending / unsubscribed / bounced → reintenta el opt-in con un token nuevo.
+      const confirmToken = crypto.randomUUID();
+      const unsubscribeToken = row.status === 'pending' ? undefined : crypto.randomUUID();
+
+      if (unsubscribeToken) {
+        await db.query(
+          `UPDATE subscribers SET status = 'pending', nombre = $2, origen = $3, confirm_token = $4, unsubscribe_token = $5 WHERE id = $1`,
+          [row.id, nombre || null, origen, confirmToken, unsubscribeToken]
+        );
+      } else {
+        await db.query(
+          `UPDATE subscribers SET status = 'pending', nombre = $2, origen = $3, confirm_token = $4 WHERE id = $1`,
+          [row.id, nombre || null, origen, confirmToken]
+        );
+      }
+
+      const confirmLink = `${siteUrl}/.netlify/functions/newsletter-confirm?token=${confirmToken}`;
+      const emailResult = await sendEmail({
+        to: email,
+        subject: 'Confirma tu suscripción a VidigozTV',
+        html: confirmEmailHtml({ nombre, confirmLink, siteUrl }),
+      });
+      if (!emailResult.ok) {
+        console.error('[newsletter] error enviando confirmación:', emailResult.error);
+      }
+
+      return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ success: true, alreadySubscribed: false }) };
     }
 
-    await notion.pages.create({
-      parent: { database_id },
-      properties: {
-        Email:  { title: [{ text: { content: email } }] },
-        Nombre: nombre ? { rich_text: [{ text: { content: nombre } }] } : { rich_text: [] },
-        Origen: { select: { name: origen } },
-      },
+    // Suscriptor nuevo
+    const confirmToken = crypto.randomUUID();
+    const unsubscribeToken = crypto.randomUUID();
+
+    await db.query(
+      `INSERT INTO subscribers (email, nombre, status, origen, confirm_token, unsubscribe_token)
+       VALUES ($1, $2, 'pending', $3, $4, $5)`,
+      [email, nombre || null, origen, confirmToken, unsubscribeToken]
+    );
+
+    const confirmLink = `${siteUrl}/.netlify/functions/newsletter-confirm?token=${confirmToken}`;
+    const emailResult = await sendEmail({
+      to: email,
+      subject: 'Confirma tu suscripción a VidigozTV',
+      html: confirmEmailHtml({ nombre, confirmLink, siteUrl }),
     });
+    if (!emailResult.ok) {
+      console.error('[newsletter] error enviando confirmación:', emailResult.error);
+    }
 
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ success: true, alreadySubscribed: false }) };
   } catch (err) {

@@ -2,6 +2,12 @@
   publish   = "site"
   functions = "netlify/functions"
 
+# ── Newsletter: cron diario (Netlify Scheduled Function) ─────────────────────
+# 9am UTC ≈ 3am Tecate. Revisa envíos programados vencidos y, si no hay, toma la
+# historia más antigua con Estado = Programado que no se haya enviado aún.
+[functions."newsletter-cron"]
+  schedule = "0 9 * * *"
+
 # ── Taller: cada herramienta vive en su subcarpeta dentro de site/ ────────────
 [[redirects]]
   from   = "/taller/vidiclip"
@@ -21,6 +27,11 @@
 [[redirects]]
   from   = "/taller/analytics"
   to     = "/taller/analytics/index.html"
+  status = 200
+
+[[redirects]]
+  from   = "/taller/newsletter"
+  to     = "/taller/newsletter/index.html"
   status = 200
 
 # ── SPA fallback — debe ir al final ──────────────────────────────────────────

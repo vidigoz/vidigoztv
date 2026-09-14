@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suscripción confirmada — VidigozTV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin:0; padding:0; }
+  body {
+    background: #050410;
+    font-family: 'Manrope', system-ui, sans-serif;
+    display: flex; align-items: center; justify-content: center;
+    min-height: 100vh;
+  }
+  .box { text-align: center; max-width: 400px; padding: 40px 24px; }
+  .icon { font-size: 44px; margin-bottom: 16px; }
+  .title { font: 700 22px 'Space Grotesk', sans-serif; color: #f2efe9; }
+  .subtitle { font-size: 14px; color: rgba(255,255,255,.5); margin-top: 10px; line-height: 1.6; }
+  .divider { width: 40px; height: 2px; background: #e2632f; margin: 18px auto; border-radius: 1px; }
+  a.home { color: #e2632f; text-decoration: none; font-size: 13.5px; font-weight: 600; }
+  a.home:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="box">
+  <div id="content">
+    <div class="icon">✓</div>
+    <div class="title">¡Suscripción confirmada!</div>
+    <div class="subtitle">Te avisaremos por correo cada vez que haya una historia nueva.</div>
+  </div>
+  <div class="divider"></div>
+  <a class="home" href="/">← Volver al inicio</a>
+</div>
+<script>
+  const params = new URLSearchParams(location.search);
+  if (params.get('ok') === '0') {
+    document.getElementById('content').innerHTML = `
+      <div class="icon">⚠️</div>
+      <div class="title">No se pudo confirmar</div>
+      <div class="subtitle">El link ya expiró o no es válido. Intenta suscribirte de nuevo desde el inicio.</div>
+    `;
+  }
+</script>
+</body>
+</html>
