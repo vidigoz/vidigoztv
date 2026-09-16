@@ -1,5 +1,9 @@
 // Netlify Scheduled Function — corre automáticamente según el horario declarado en
-// netlify.toml ([functions."newsletter-cron"] schedule = "0 9 * * *", 9am UTC ≈ 3am Tecate).
+// netlify.toml ([functions."newsletter-cron"] schedule = "*/30 * * * *", cada 30 minutos).
+// Antes corría una vez al día (9am UTC): un envío programado para una hora específica del
+// mismo día nunca llegaba a dispararse porque el siguiente chequeo era hasta el día
+// siguiente. Con 30 min el margen de retraso máximo entre la hora programada y el envío
+// real es de 30 minutos, sin importar qué hora se haya elegido.
 // El resto de las functions de este repo usan CommonJS (`exports.handler`), así que el
 // schedule se declara en netlify.toml en vez de con `export const config` (sintaxis ESM de
 // Netlify Functions v2) para mantener consistencia con el resto del código.

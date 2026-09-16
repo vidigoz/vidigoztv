@@ -2,11 +2,13 @@
   publish   = "site"
   functions = "netlify/functions"
 
-# ── Newsletter: cron diario (Netlify Scheduled Function) ─────────────────────
-# 9am UTC ≈ 3am Tecate. Revisa envíos programados vencidos y, si no hay, toma la
-# historia más antigua con Estado = Programado que no se haya enviado aún.
+# ── Newsletter: cron (Netlify Scheduled Function) ─────────────────────────────
+# Corre cada 30 minutos y SOLO revisa si hay algún envío con scheduled_at ya vencido
+# (programado desde el dashboard) — si no hay nada, no hace nada. Antes corría una vez
+# al día (9am UTC), lo que dejaba sin enviar cualquier cosa programada para una hora
+# específica del mismo día (el próximo chequeo llegaba hasta el día siguiente).
 [functions."newsletter-cron"]
-  schedule = "0 9 * * *"
+  schedule = "*/30 * * * *"
 
 # ── Taller: cada herramienta vive en su subcarpeta dentro de site/ ────────────
 [[redirects]]
