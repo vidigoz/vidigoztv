@@ -1,7 +1,9 @@
 // POST /.netlify/functions/newsletter-send
 // Invocable manualmente desde el dashboard de /taller/newsletter, y reutilizado por el cron.
-// Body: { notionPageId?: string, sendId?: string }
-//   - Si se pasa notionPageId: crea (o reanuda) un envío para esa historia.
+// Body: { notionPageId?: string, sendId?: string, resendMode?: 'onlyNew'|'all' }
+//   - Si se pasa notionPageId: crea (o reanuda) un envío para esa historia. Si esa historia ya
+//     se envió antes, esto es un REENVÍO — crea un send nuevo e independiente, y resendMode
+//     decide a quién le llega ('onlyNew': solo quien nunca la recibió; 'all': a todos de nuevo).
 //   - Si no se pasa nada: busca la próxima historia con Estado = Programado en Notion que
 //     no tenga ya un `sends` completado.
 const { getPool } = require('./_shared/db');
@@ -48,7 +50,8 @@ exports.handler = async (event) => {
       notionPageId = r.rows[0].notion_page_id;
     }
 
-    const result = await sendNewsletterForPage({ notionPageId, sendId, siteUrl });
+    const resendMode = body.resendMode === 'all' ? 'all' : 'onlyNew';
+    const result = await sendNewsletterForPage({ notionPageId, sendId, siteUrl, resendMode });
 
     return {
       statusCode: 200,

@@ -773,31 +773,44 @@ async function handleNewsletterPreview(req, res) {
 }
 
 // ── Lógica de envío compartida (manual + cron) ──
-async function sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl }) {
+async function sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl, resendMode }) {
   const db = getPgPool();
   const site = siteUrl || SITE_URL_ENV || 'https://vidigoztv.com';
 
   const historia = await getHistoriaByIdLocal(notionPageId);
   const subject = historia.titulo || 'Nueva historia de VidigozTV';
 
+  // Reenvíos: si la historia ya se envió antes, esto es un reenvío — siempre crea un `sends`
+  // nuevo e independiente (nunca reutiliza uno ya completado). resendMode decide a quién:
+  // 'onlyNew' (default) excluye a quien ya la recibió en cualquier envío previo; 'all' no excluye a nadie.
   let send;
+  let isResend = false;
+  let mode = resendMode === 'all' ? 'all' : 'onlyNew';
   if (sendId) {
     const r = await db.query('SELECT * FROM sends WHERE id = $1', [sendId]);
     if (r.rowCount === 0) throw new Error('sendId no encontrado');
     send = r.rows[0];
     if (send.sent) return { alreadySent: true, sendId: send.id, recipientsCount: send.recipients_count };
+    const other = await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = true AND id <> $2 LIMIT 1', [notionPageId, send.id]);
+    isResend = other.rowCount > 0;
+    if (send.resend_mode) mode = send.resend_mode;
     await db.query('UPDATE sends SET subject = $2 WHERE id = $1', [send.id, subject]);
   } else {
-    const existing = await db.query('SELECT id, sent FROM sends WHERE notion_page_id = $1 AND sent = true LIMIT 1', [notionPageId]);
-    if (existing.rowCount > 0) return { alreadySent: true, sendId: existing.rows[0].id };
-    const ins = await db.query(`INSERT INTO sends (notion_page_id, subject) VALUES ($1, $2) RETURNING *`, [notionPageId, subject]);
+    const existing = await db.query('SELECT id, sent FROM sends WHERE notion_page_id = $1 AND sent = true ORDER BY sent_at DESC LIMIT 1', [notionPageId]);
+    isResend = existing.rowCount > 0;
+    const ins = await db.query(`INSERT INTO sends (notion_page_id, subject, resend_mode) VALUES ($1, $2, $3) RETURNING *`, [notionPageId, subject, isResend ? mode : null]);
     send = ins.rows[0];
   }
 
+  const excludeAcrossSends = isResend && mode === 'onlyNew';
   const subs = await db.query(
-    `SELECT s.id, s.email, s.nombre, s.unsubscribe_token FROM subscribers s
-     WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)`,
-    [send.id]
+    excludeAcrossSends
+      ? `SELECT s.id, s.email, s.nombre, s.unsubscribe_token FROM subscribers s
+         WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)
+           AND NOT EXISTS (SELECT 1 FROM send_recipients sr2 JOIN sends s2 ON s2.id = sr2.send_id WHERE s2.notion_page_id = $2 AND s2.sent = true AND sr2.subscriber_id = s.id)`
+      : `SELECT s.id, s.email, s.nombre, s.unsubscribe_token FROM subscribers s
+         WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)`,
+    excludeAcrossSends ? [send.id, notionPageId] : [send.id]
   );
 
   let sentCount = 0, errorCount = 0;
@@ -817,8 +830,11 @@ async function sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl }) {
   const totalRecipients = await db.query('SELECT count(*)::int AS count FROM send_recipients WHERE send_id = $1', [send.id]);
   const finalCount = totalRecipients.rows[0].count;
   const remaining = await db.query(
-    `SELECT count(*)::int AS count FROM subscribers s WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)`,
-    [send.id]
+    excludeAcrossSends
+      ? `SELECT count(*)::int AS count FROM subscribers s WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)
+         AND NOT EXISTS (SELECT 1 FROM send_recipients sr2 JOIN sends s2 ON s2.id = sr2.send_id WHERE s2.notion_page_id = $2 AND s2.sent = true AND sr2.subscriber_id = s.id)`
+      : `SELECT count(*)::int AS count FROM subscribers s WHERE s.status = 'active' AND NOT EXISTS (SELECT 1 FROM send_recipients sr WHERE sr.send_id = $1 AND sr.subscriber_id = s.id)`,
+    excludeAcrossSends ? [send.id, notionPageId] : [send.id]
   );
   const fullyDone = remaining.rows[0].count === 0;
   if (fullyDone) {
@@ -863,7 +879,8 @@ async function handleNewsletterSend(req, res) {
       notionPageId = r.rows[0].notion_page_id;
     }
 
-    const result = await sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl });
+    const resendMode = body.resendMode === 'all' ? 'all' : 'onlyNew';
+    const result = await sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl, resendMode });
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ success: true, ...result }));
   } catch (err) {
@@ -926,13 +943,18 @@ async function handleNewsletterSends(req, res) {
       if (body.action === 'schedule') {
         const { notionPageId, scheduledAt, subject } = body;
         if (!notionPageId || !scheduledAt) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Faltan notionPageId o scheduledAt' })); return; }
-        const existing = await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = false LIMIT 1', [notionPageId]);
+        const resendMode = body.resendMode === 'all' ? 'all' : 'onlyNew';
+        // Reusar fila no enviada solo si esta historia nunca se envió. Si ya tiene un
+        // sends.sent=true previo, es un reenvío: siempre crea una fila nueva e independiente.
+        const alreadySent = await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = true LIMIT 1', [notionPageId]);
+        const isResend = alreadySent.rowCount > 0;
+        const existing = isResend ? { rowCount: 0 } : await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = false LIMIT 1', [notionPageId]);
         let row;
         if (existing.rowCount > 0) {
           const upd = await db.query(`UPDATE sends SET scheduled_at = $2, subject = COALESCE($3, subject) WHERE id = $1 RETURNING *`, [existing.rows[0].id, scheduledAt, subject || null]);
           row = upd.rows[0];
         } else {
-          const ins = await db.query(`INSERT INTO sends (notion_page_id, subject, scheduled_at) VALUES ($1, $2, $3) RETURNING *`, [notionPageId, subject || null, scheduledAt]);
+          const ins = await db.query(`INSERT INTO sends (notion_page_id, subject, scheduled_at, resend_mode) VALUES ($1, $2, $3, $4) RETURNING *`, [notionPageId, subject || null, scheduledAt, isResend ? resendMode : null]);
           row = ins.rows[0];
         }
         res.writeHead(200, { 'Content-Type': 'application/json' });

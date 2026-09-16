@@ -198,7 +198,10 @@ async function renderHistorias() {
                   ${!(h.send && h.send.sent) ? `
                     <button class="btn small" data-action="send-now" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Enviar ahora</button>
                     <button class="btn secondary small" data-action="schedule" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Programar</button>
-                  ` : ''}
+                  ` : `
+                    <button class="btn small" data-action="resend" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Reenviar</button>
+                    <button class="btn secondary small" data-action="schedule-resend" data-id="${h.id}" data-titulo="${escapeHtml(h.titulo)}">Programar reenvío</button>
+                  `}
                 </div>
               </div>
             `;
@@ -211,10 +214,16 @@ async function renderHistorias() {
       btn.addEventListener('click', () => openPreviewModal(btn.dataset.id, btn.dataset.titulo));
     });
     content.querySelectorAll('[data-action="send-now"]').forEach((btn) => {
-      btn.addEventListener('click', () => openSendNowModal(btn.dataset.id, btn.dataset.titulo));
+      btn.addEventListener('click', () => openSendNowModal(btn.dataset.id, btn.dataset.titulo, false));
     });
     content.querySelectorAll('[data-action="schedule"]').forEach((btn) => {
-      btn.addEventListener('click', () => openScheduleModal(btn.dataset.id, btn.dataset.titulo));
+      btn.addEventListener('click', () => openScheduleModal(btn.dataset.id, btn.dataset.titulo, false));
+    });
+    content.querySelectorAll('[data-action="resend"]').forEach((btn) => {
+      btn.addEventListener('click', () => openSendNowModal(btn.dataset.id, btn.dataset.titulo, true));
+    });
+    content.querySelectorAll('[data-action="schedule-resend"]').forEach((btn) => {
+      btn.addEventListener('click', () => openScheduleModal(btn.dataset.id, btn.dataset.titulo, true));
     });
   } catch (err) {
     content.innerHTML = `<div class="panel"><div class="empty">No se pudieron cargar las historias: ${escapeHtml(err.message)}</div></div>`;
@@ -243,20 +252,32 @@ function openPreviewModal(pageId, titulo) {
   modalRoot.querySelector('[data-action="schedule"]').addEventListener('click', () => { closeModal(); openScheduleModal(pageId, titulo); });
 }
 
-function openSendNowModal(pageId, titulo) {
+function openSendNowModal(pageId, titulo, isResend) {
   modalRoot.innerHTML = `
     <div class="modal-overlay" id="overlay">
       <div class="modal" style="max-width:420px;">
         <div class="modal-header">
-          <div class="modal-title">Enviar ahora</div>
+          <div class="modal-title">${isResend ? 'Reenviar' : 'Enviar ahora'}</div>
           <button class="modal-close" id="closeBtn">&times;</button>
         </div>
-        <p style="font-size:13.5px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:16px;">
-          Se enviará <strong>${escapeHtml(titulo)}</strong> a todos los suscriptores activos. Esta acción no se puede deshacer.
+        <p style="font-size:13.5px;color:rgba(255,255,255,.6);line-height:1.6;margin-bottom:${isResend ? '14' : '16'}px;">
+          ${isResend
+            ? `Esta historia ya se envió antes. <strong>${escapeHtml(titulo)}</strong> se enviará de nuevo — elige a quién.`
+            : `Se enviará <strong>${escapeHtml(titulo)}</strong> a todos los suscriptores activos. Esta acción no se puede deshacer.`}
         </p>
+        ${isResend ? `
+          <div class="field" style="margin-bottom:16px;">
+            <label class="field-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+              <input type="radio" name="resendMode" value="onlyNew" checked> Solo a quien no la recibió todavía
+            </label>
+            <label class="field-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;margin-top:6px;">
+              <input type="radio" name="resendMode" value="all"> A todos los activos de nuevo
+            </label>
+          </div>
+        ` : ''}
         <div id="sendMsg" class="msg"></div>
         <div class="li-actions">
-          <button class="btn" id="confirmSend">Confirmar envío</button>
+          <button class="btn" id="confirmSend">${isResend ? 'Confirmar reenvío' : 'Confirmar envío'}</button>
           <button class="btn secondary" id="cancelSend">Cancelar</button>
         </div>
       </div>
@@ -268,31 +289,45 @@ function openSendNowModal(pageId, titulo) {
   document.getElementById('confirmSend').addEventListener('click', async () => {
     const btn = document.getElementById('confirmSend');
     const msg = document.getElementById('sendMsg');
+    const resendMode = isResend ? (modalRoot.querySelector('input[name="resendMode"]:checked')?.value || 'onlyNew') : undefined;
     btn.disabled = true; btn.textContent = 'Enviando…';
     try {
-      const result = await apiPost('/.netlify/functions/newsletter-send', { notionPageId: pageId });
+      const result = await apiPost('/.netlify/functions/newsletter-send', { notionPageId: pageId, ...(resendMode ? { resendMode } : {}) });
       msg.className = 'msg ok';
-      msg.textContent = `Enviado a ${result.sentCount} de ${result.sentCount + result.errorCount} suscriptores${result.errorCount ? ` (${result.errorCount} con error — revisa que RESEND_API_KEY esté configurado)` : ''}.`;
+      const total = result.sentCount + result.errorCount;
+      msg.textContent = total === 0
+        ? 'No había nadie pendiente de recibir este envío con ese criterio.'
+        : `Enviado a ${result.sentCount} de ${total} suscriptores${result.errorCount ? ` (${result.errorCount} con error — revisa que RESEND_API_KEY esté configurado)` : ''}.`;
       setTimeout(() => { closeModal(); renderHistorias(); }, 1800);
     } catch (err) {
       msg.className = 'msg err';
       msg.textContent = err.message;
-      btn.disabled = false; btn.textContent = 'Confirmar envío';
+      btn.disabled = false; btn.textContent = isResend ? 'Confirmar reenvío' : 'Confirmar envío';
     }
   });
 }
 
-function openScheduleModal(pageId, titulo) {
+function openScheduleModal(pageId, titulo, isResend) {
   const now = new Date(Date.now() + 60 * 60 * 1000);
   const defaultVal = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
   modalRoot.innerHTML = `
     <div class="modal-overlay" id="overlay">
       <div class="modal" style="max-width:420px;">
         <div class="modal-header">
-          <div class="modal-title">Programar envío</div>
+          <div class="modal-title">${isResend ? 'Programar reenvío' : 'Programar envío'}</div>
           <button class="modal-close" id="closeBtn">&times;</button>
         </div>
         <p style="font-size:13.5px;color:rgba(255,255,255,.6);margin-bottom:14px;">${escapeHtml(titulo)}</p>
+        ${isResend ? `
+          <div class="field" style="margin-bottom:14px;">
+            <label class="field-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;">
+              <input type="radio" name="resendMode" value="onlyNew" checked> Solo a quien no la recibió todavía
+            </label>
+            <label class="field-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:400;margin-top:6px;">
+              <input type="radio" name="resendMode" value="all"> A todos los activos de nuevo
+            </label>
+          </div>
+        ` : ''}
         <div class="field">
           <label class="field-label">Fecha y hora</label>
           <input type="datetime-local" id="scheduledAt" value="${defaultVal}">
@@ -312,10 +347,11 @@ function openScheduleModal(pageId, titulo) {
     const btn = document.getElementById('confirmSchedule');
     const msg = document.getElementById('scheduleMsg');
     const val = document.getElementById('scheduledAt').value;
+    const resendMode = isResend ? (modalRoot.querySelector('input[name="resendMode"]:checked')?.value || 'onlyNew') : undefined;
     if (!val) { msg.className = 'msg err'; msg.textContent = 'Elige una fecha y hora.'; return; }
     btn.disabled = true; btn.textContent = 'Programando…';
     try {
-      await apiPost('/.netlify/functions/newsletter-sends', { action: 'schedule', notionPageId: pageId, scheduledAt: new Date(val).toISOString(), subject: titulo });
+      await apiPost('/.netlify/functions/newsletter-sends', { action: 'schedule', notionPageId: pageId, scheduledAt: new Date(val).toISOString(), subject: titulo, ...(resendMode ? { resendMode } : {}) });
       msg.className = 'msg ok';
       msg.textContent = 'Programado correctamente.';
       setTimeout(() => { closeModal(); renderHistorias(); }, 1200);
@@ -344,7 +380,7 @@ async function renderProgramados() {
             <div class="list-item" data-id="${s.id}">
               <div class="li-main">
                 <div class="li-title">${escapeHtml(s.subject || '(sin asunto)')}</div>
-                <div class="li-sub">Se enviará ${fmtDate(s.scheduled_at)}</div>
+                <div class="li-sub">Se enviará ${fmtDate(s.scheduled_at)}${s.resend_mode ? ` · Reenvío (${s.resend_mode === 'all' ? 'a todos de nuevo' : 'solo nuevos'})` : ''}</div>
               </div>
               <div class="li-actions">
                 <button class="btn danger small" data-action="cancel" data-id="${s.id}">Cancelar programación</button>
@@ -390,7 +426,7 @@ async function renderHistorial() {
               ${sends.map((s) => `
                 <tr>
                   <td>${fmtDate(s.sent_at)}</td>
-                  <td>${escapeHtml(s.subject || '—')}</td>
+                  <td>${escapeHtml(s.subject || '—')}${s.resend_mode ? ` <span class="badge programado" style="font-size:10px;">reenvío</span>` : ''}</td>
                   <td>${s.recipients_count}</td>
                   <td>${s.stats.bounced}</td>
                   <td>${s.stats.complained}</td>

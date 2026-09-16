@@ -76,12 +76,21 @@ exports.handler = async (event) => {
     try {
       if (body.action === 'schedule') {
         const { notionPageId, scheduledAt, subject } = body;
+        const resendMode = body.resendMode === 'all' ? 'all' : 'onlyNew';
         if (!notionPageId || !scheduledAt) {
           return { statusCode: 400, body: JSON.stringify({ error: 'Faltan notionPageId o scheduledAt' }) };
         }
 
-        // Reusar fila existente no enviada para esta historia, si la hay.
-        const existing = await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = false LIMIT 1', [notionPageId]);
+        // Reusar fila existente no enviada para esta historia, si la hay — pero solo cuando
+        // esa historia nunca se envió (primer envío). Si ya tiene un `sends.sent = true` previo,
+        // esto es un REENVÍO: siempre crea una fila nueva e independiente (nunca reutiliza una
+        // ya completada) y guarda resend_mode para que el cron sepa a quién mandárselo.
+        const alreadySent = await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = true LIMIT 1', [notionPageId]);
+        const isResend = alreadySent.rowCount > 0;
+
+        const existing = isResend
+          ? { rowCount: 0 }
+          : await db.query('SELECT id FROM sends WHERE notion_page_id = $1 AND sent = false LIMIT 1', [notionPageId]);
         let row;
         if (existing.rowCount > 0) {
           const upd = await db.query(
@@ -91,8 +100,8 @@ exports.handler = async (event) => {
           row = upd.rows[0];
         } else {
           const ins = await db.query(
-            `INSERT INTO sends (notion_page_id, subject, scheduled_at) VALUES ($1, $2, $3) RETURNING *`,
-            [notionPageId, subject || null, scheduledAt]
+            `INSERT INTO sends (notion_page_id, subject, scheduled_at, resend_mode) VALUES ($1, $2, $3, $4) RETURNING *`,
+            [notionPageId, subject || null, scheduledAt, isResend ? resendMode : null]
           );
           row = ins.rows[0];
         }

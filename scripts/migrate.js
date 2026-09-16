@@ -23,14 +23,17 @@ async function main() {
     process.exit(1);
   }
 
-  const sqlPath = path.join(__dirname, '..', 'netlify', 'functions', '_migrations', '001_newsletter.sql');
-  const sql = fs.readFileSync(sqlPath, 'utf8');
+  const migrationsDir = path.join(__dirname, '..', 'netlify', 'functions', '_migrations');
+  const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.sql')).sort();
 
   const pool = new Pool({ connectionString, max: 1 });
   try {
-    console.log('Corriendo migración 001_newsletter.sql...');
-    await pool.query(sql);
-    console.log('Migración aplicada correctamente.');
+    for (const file of files) {
+      console.log(`Corriendo migración ${file}...`);
+      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+      await pool.query(sql);
+    }
+    console.log('Migraciones aplicadas correctamente.');
 
     const tables = ['subscribers', 'sends', 'send_events', 'send_recipients'];
     for (const t of tables) {
