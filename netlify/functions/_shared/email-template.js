@@ -113,8 +113,11 @@ function renderEmail({ titulo, cuerpo, imagenUrl, unsubscribeLink, siteUrl }) {
                       <td style="padding-right:10px;">
                         <a href="https://www.instagram.com/vidigoztv/"><img src="${site}/icons/newsletter-social-ig.png" width="40" height="40" alt="Instagram" style="display:block;border-radius:10px;"></a>
                       </td>
-                      <td>
+                      <td style="padding-right:10px;">
                         <a href="https://www.tiktok.com/@vidigoztv"><img src="${site}/icons/newsletter-social-tt.png" width="40" height="40" alt="TikTok" style="display:block;border-radius:10px;"></a>
+                      </td>
+                      <td>
+                        <a href="https://www.midjourney.com/@vidigoz"><img src="${site}/icons/newsletter-social-mj.png" width="40" height="40" alt="Midjourney" style="display:block;border-radius:10px;"></a>
                       </td>
                     </tr>
                   </table>
