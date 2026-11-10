@@ -6,18 +6,20 @@
 // Cualquier usuario es válido; solo se compara la contraseña — igual que server.js.
 
 export default async (request, context) => {
-  const PASSWORD =
-    Netlify.env.get('TALLER_PASSWORD') || Netlify.env.get('taller') || '';
+  const PASSWORDS = [
+    Netlify.env.get('TALLER_PASSWORD') || Netlify.env.get('taller') || '',
+    Netlify.env.get('TALLER_PASSWORD_2') || Netlify.env.get('taller2') || '',
+  ].filter(Boolean);
 
   // Si no hay contraseña configurada, no bloquea (evita candado sin llave).
-  if (!PASSWORD) return context.next();
+  if (!PASSWORDS.length) return context.next();
 
   const header = request.headers.get('authorization') || '';
   if (header.startsWith('Basic ')) {
     try {
       const decoded = atob(header.slice(6));
       const pass = decoded.slice(decoded.indexOf(':') + 1);
-      if (pass === PASSWORD) return context.next();
+      if (PASSWORDS.includes(pass)) return context.next();
     } catch {
       // credenciales malformadas → cae al 401
     }

@@ -10,6 +10,7 @@ const ROOT = __dirname;
 
 // ── Leer configuración de .env ──
 let TALLER_PASSWORD = 'admin';
+let TALLER_PASSWORD_2 = '';
 let NOTION_DB_ID = '';
 let NOTION_TOKEN = '';
 let NEWSLETTER_DB_ID = '';
@@ -25,6 +26,9 @@ try {
 
   const tallerMatch = envContent.match(/taller\s*=\s*"([^"]+)"/);
   if (tallerMatch) TALLER_PASSWORD = tallerMatch[1];
+
+  const taller2Match = envContent.match(/taller2\s*=\s*"([^"]+)"/);
+  if (taller2Match) TALLER_PASSWORD_2 = taller2Match[1];
 
   const dbMatch = envContent.match(/^db_id\s*=\s*(.+)$/m);
   if (dbMatch) NOTION_DB_ID = dbMatch[1].trim();
@@ -62,10 +66,14 @@ function getSiteUrlFromReq(req) {
   return SITE_URL_ENV || 'http://localhost:4000';
 }
 
+function isTallerPass(pass) {
+  return pass === TALLER_PASSWORD || (!!TALLER_PASSWORD_2 && pass === TALLER_PASSWORD_2);
+}
+
 function isTallerAuthorizedReq(req) {
   if (!TALLER_PASSWORD) return true;
   const auth = parseBasicAuth(req);
-  return !!auth && auth.pass === TALLER_PASSWORD;
+  return !!auth && isTallerPass(auth.pass);
 }
 
 // ── Resend: envío mínimo vía fetch (mismo patrón que _resend.js) ──
@@ -161,7 +169,7 @@ http.createServer((req, res) => {
   // ── /taller (hub) → protegido con contraseña ──
   if (urlPath === '/taller' || urlPath === '/taller/') {
     const auth = parseBasicAuth(req);
-    if (!auth || auth.pass !== TALLER_PASSWORD) {
+    if (!auth || !isTallerPass(auth.pass)) {
       requireAuth(res);
       return;
     }

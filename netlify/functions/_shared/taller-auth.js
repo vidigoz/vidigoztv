@@ -7,6 +7,24 @@
 // El navegador ya reenvía las credenciales Basic Auth al mismo origen una vez autenticado en
 // /taller, así que el dashboard (fetch same-origin) no necesita hacer nada especial.
 
+function getTallerPasswords() {
+  const list = [getTallerPassword()];
+  let pw2 = process.env.TALLER_PASSWORD_2 || process.env.taller2 || '';
+  if (!pw2) {
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const envContent = fs.readFileSync(path.join(__dirname, '..', '..', '.env'), 'utf8');
+      const m = envContent.match(/taller2\s*=\s*"([^"]+)"/);
+      if (m) pw2 = m[1];
+    } catch {
+      // sin .env disponible
+    }
+  }
+  list.push(pw2);
+  return list.filter(Boolean);
+}
+
 function getTallerPassword() {
   let pw = process.env.TALLER_PASSWORD || process.env.taller || '';
   if (!pw) {
@@ -31,15 +49,15 @@ function getTallerPassword() {
  * el edge function: evita candado sin llave).
  */
 function isTallerAuthorized(event) {
-  const configured = getTallerPassword();
-  if (!configured) return true;
+  const configured = getTallerPasswords();
+  if (!configured.length) return true;
 
   const header = (event.headers && (event.headers['authorization'] || event.headers['Authorization'])) || '';
   if (header.startsWith('Basic ')) {
     try {
       const decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
       const pass = decoded.slice(decoded.indexOf(':') + 1);
-      if (pass === configured) return true;
+      if (configured.includes(pass)) return true;
     } catch {
       // credenciales malformadas
     }
