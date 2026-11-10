@@ -1,9 +1,16 @@
-// ── Basic Auth para /taller/* en producción (Netlify Edge) ──
-// La contraseña se lee de la variable de ambiente TALLER_PASSWORD.
-// Configúrala en Netlify: Site settings → Environment variables → TALLER_PASSWORD
-// (localmente, netlify dev la toma del .env raíz: taller = "...").
+// ── Login para /taller/* en producción (Netlify Edge) ──
+// Contraseñas: TALLER_PASSWORD y, opcionalmente, TALLER_PASSWORD_2 (Netlify → Environment variables;
+// en local `netlify dev` las toma del .env raíz: taller = "...", taller2 = "...").
 //
-// Cualquier usuario es válido; solo se compara la contraseña — igual que server.js.
+// Sin popup: si no hay sesión se muestra el formulario /taller-login.html dentro de la misma
+// página. El formulario llama a /.netlify/functions/taller-login, que deja la cookie `taller_auth`.
+// Cualquier usuario es válido; solo se compara la contraseña. Basic Auth sigue aceptándose
+// por compatibilidad (curl/scripts), pero ya no se solicita al navegador.
+
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
 
 export default async (request, context) => {
   const PASSWORDS = [
@@ -14,6 +21,15 @@ export default async (request, context) => {
   // Si no hay contraseña configurada, no bloquea (evita candado sin llave).
   if (!PASSWORDS.length) return context.next();
 
+  // 1) Cookie de sesión
+  const cm = (request.headers.get('cookie') || '').match(/(?:^|;\s*)taller_auth=([^;]+)/);
+  if (cm) {
+    for (const p of PASSWORDS) {
+      if ((await sha256Hex('vidigoz-taller|' + p)) === cm[1]) return context.next();
+    }
+  }
+
+  // 2) Basic Auth (compatibilidad)
   const header = request.headers.get('authorization') || '';
   if (header.startsWith('Basic ')) {
     try {
@@ -21,23 +37,19 @@ export default async (request, context) => {
       const pass = decoded.slice(decoded.indexOf(':') + 1);
       if (PASSWORDS.includes(pass)) return context.next();
     } catch {
-      // credenciales malformadas → cae al 401
+      // credenciales malformadas → cae al login
     }
   }
 
-  return new Response(
-    '<!doctype html><meta charset="utf-8"><title>Taller — VidigozTV</title>' +
-      '<body style="font-family:system-ui;background:#0c0c0e;color:#eee;display:grid;place-items:center;height:100vh;margin:0">' +
-      '<div style="text-align:center"><h1>🔒 Taller</h1>' +
-      '<p>Acceso restringido. Ingresa la contraseña para continuar.</p></div>',
-    {
+  // Navegación → formulario de login en la misma URL. Otros recursos (fetch, media) → 401 sin popup.
+  if ((request.headers.get('accept') || '').includes('text/html')) {
+    const login = await fetch(new URL('/taller-login.html', request.url));
+    return new Response(login.body, {
       status: 401,
-      headers: {
-        'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"',
-        'Content-Type': 'text/html; charset=utf-8',
-      },
-    }
-  );
+      headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+    });
+  }
+  return new Response('No autorizado', { status: 401, headers: { 'Cache-Control': 'no-store' } });
 };
 
 export const config = { path: ['/taller', '/taller/*'] };

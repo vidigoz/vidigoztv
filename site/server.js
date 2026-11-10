@@ -70,8 +70,20 @@ function isTallerPass(pass) {
   return pass === TALLER_PASSWORD || (!!TALLER_PASSWORD_2 && pass === TALLER_PASSWORD_2);
 }
 
+function tallerToken(pass) {
+  return crypto.createHash('sha256').update('vidigoz-taller|' + pass).digest('hex');
+}
+
+function hasTallerCookie(req) {
+  const m = (req.headers['cookie'] || '').match(/(?:^|;\s*)taller_auth=([^;]+)/);
+  if (!m) return false;
+  return [TALLER_PASSWORD, TALLER_PASSWORD_2].filter(Boolean).some((p) => tallerToken(p) === m[1]);
+}
+
+// Sesión válida = cookie del login (o Basic Auth por compatibilidad con curl/scripts).
 function isTallerAuthorizedReq(req) {
   if (!TALLER_PASSWORD) return true;
+  if (hasTallerCookie(req)) return true;
   const auth = parseBasicAuth(req);
   return !!auth && isTallerPass(auth.pass);
 }
@@ -136,28 +148,15 @@ function parseBasicAuth(req) {
 }
 
 function requireAuth(res) {
-  res.writeHead(401, {
-    'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"',
-    'Content-Type': 'text/html; charset=utf-8'
-  });
-  res.end(`<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acceso Restringido</title>
-<style>
-  body{background:#050410;color:#f2efe9;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
-  .box{text-align:center;max-width:360px;padding:40px}
-  h1{font-size:20px;margin-bottom:12px}
-  p{color:rgba(255,255,255,.5);font-size:14px;line-height:1.6}
-  a{color:#e2632f;text-decoration:none}
-</style></head>
-<body>
-<div class="box">
-  <h1>🔒 Taller</h1>
-  <p>Acceso restringido. Ingresa la contraseña para continuar.</p>
-  <p style="margin-top:24px"><a href="javascript:location.reload()">Intentar de nuevo</a></p>
-</div>
-</body>
-</html>`);
+  // Sin WWW-Authenticate: no hay popup del navegador; se muestra el formulario dentro de la página.
+  try {
+    const html = fs.readFileSync(path.join(__dirname, 'taller-login.html'));
+    res.writeHead(401, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+    res.end(html);
+  } catch {
+    res.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('No autorizado');
+  }
 }
 
 http.createServer((req, res) => {
@@ -168,8 +167,7 @@ http.createServer((req, res) => {
 
   // ── /taller (hub) → protegido con contraseña ──
   if (urlPath === '/taller' || urlPath === '/taller/') {
-    const auth = parseBasicAuth(req);
-    if (!auth || !isTallerPass(auth.pass)) {
+    if (!isTallerAuthorizedReq(req)) {
       requireAuth(res);
       return;
     }
@@ -180,6 +178,28 @@ http.createServer((req, res) => {
   // ── /taller/* (herramientas) → acceso libre una vez dentro ──
   if (urlPath.startsWith('/taller/')) {
     handleTallerRoute(urlPath, req, res);
+    return;
+  }
+
+  // ── /.netlify/functions/taller-login → valida contraseña y entrega cookie de sesión ──
+  if (urlPath === '/.netlify/functions/taller-login') {
+    if (req.method !== 'POST') { res.writeHead(405); res.end(); return; }
+    let body = '';
+    req.on('data', (c) => { body += c; });
+    req.on('end', () => {
+      let password = '';
+      try { password = JSON.parse(body || '{}').password || ''; } catch {}
+      const valid = [TALLER_PASSWORD, TALLER_PASSWORD_2].filter(Boolean);
+      if (valid.length && !valid.includes(password)) {
+        setTimeout(() => { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Contraseña incorrecta' })); }, 600);
+        return;
+      }
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Set-Cookie': `taller_auth=${valid.length ? tallerToken(password) : 'open'}; Path=/; Max-Age=${60 * 60 * 24 * 30}; HttpOnly; SameSite=Lax`,
+      });
+      res.end(JSON.stringify({ ok: true }));
+    });
     return;
   }
 
@@ -743,7 +763,7 @@ function renderEmailLocal({ titulo, cuerpo, imagenUrl, unsubscribeLink, siteUrl 
 
 // ── /newsletter-notion-list ──
 async function handleNewsletterNotionList(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   try {
     const historias = await listHistoriasProgramadoLocal();
     const db = getPgPool();
@@ -764,7 +784,7 @@ async function handleNewsletterNotionList(req, res) {
 
 // ── /newsletter-preview ──
 async function handleNewsletterPreview(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const qs = new URL(req.url, 'http://localhost').searchParams;
   const pageId = qs.get('pageId');
   if (!pageId) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'Falta pageId' })); return; }
@@ -857,7 +877,7 @@ async function sendNewsletterForPageLocal({ notionPageId, sendId, siteUrl, resen
 // ── /newsletter-send ──
 async function handleNewsletterSend(req, res) {
   if (req.method !== 'POST') { res.writeHead(405); res.end('Method Not Allowed'); return; }
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
 
   let body = {};
   try { body = JSON.parse(await readRequestBody(req) || '{}'); }
@@ -899,7 +919,7 @@ async function handleNewsletterSend(req, res) {
 
 // ── /newsletter-sends (programar / cancelar / listar) ──
 async function handleNewsletterSends(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const db = getPgPool();
 
   if (req.method === 'GET') {
@@ -1000,7 +1020,7 @@ function csvEscapeLocal(v) {
 }
 
 async function handleNewsletterSubscribers(req, res) {
-  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json', 'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
+  if (!isTallerAuthorizedReq(req)) { res.writeHead(401, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ error: 'No autorizado' })); return; }
   const db = getPgPool();
 
   if (req.method === 'GET') {

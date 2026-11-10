@@ -7,6 +7,14 @@
 // El navegador ya reenvía las credenciales Basic Auth al mismo origen una vez autenticado en
 // /taller, así que el dashboard (fetch same-origin) no necesita hacer nada especial.
 
+const crypto = require('crypto');
+const COOKIE_NAME = 'taller_auth';
+
+// Token de sesión = sha256 de la contraseña con un prefijo fijo. Mismo cálculo en la edge function.
+function tallerToken(password) {
+  return crypto.createHash('sha256').update('vidigoz-taller|' + password).digest('hex');
+}
+
 function getTallerPasswords() {
   const list = [getTallerPassword()];
   let pw2 = process.env.TALLER_PASSWORD_2 || process.env.taller2 || '';
@@ -52,6 +60,10 @@ function isTallerAuthorized(event) {
   const configured = getTallerPasswords();
   if (!configured.length) return true;
 
+  const cookieHeader = (event.headers && (event.headers['cookie'] || event.headers['Cookie'])) || '';
+  const cm = cookieHeader.match(new RegExp('(?:^|;\\s*)' + COOKIE_NAME + '=([^;]+)'));
+  if (cm && configured.some((p) => tallerToken(p) === cm[1])) return true;
+
   const header = (event.headers && (event.headers['authorization'] || event.headers['Authorization'])) || '';
   if (header.startsWith('Basic ')) {
     try {
@@ -71,14 +83,11 @@ function unauthorizedResponse() {
     statusCode: 401,
     headers: {
       'Content-Type': 'application/json',
-      // Crítico: sin este header el navegador NO reintenta el fetch() con las
-      // credenciales que ya cacheó al autenticarse en /taller — se queda en 401
-      // silencioso y el dashboard nunca carga nada. Mismo realm que el edge
-      // function de /taller para que comparta la caché de credenciales del origen.
-      'WWW-Authenticate': 'Basic realm="Taller - VidigozTV", charset="UTF-8"',
+      // Sin WWW-Authenticate a propósito: así el navegador no abre el popup de Basic Auth.
+      // La sesión viaja en la cookie `taller_auth` (ver taller-login.js).
     },
     body: JSON.stringify({ error: 'No autorizado' }),
   };
 }
 
-module.exports = { isTallerAuthorized, unauthorizedResponse, getTallerPassword };
+module.exports = { isTallerAuthorized, unauthorizedResponse, getTallerPassword, getTallerPasswords, tallerToken, COOKIE_NAME };

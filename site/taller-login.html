@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Taller — VidigozTV</title>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0c0c0e;color:#eee;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;padding:16px}
+  .card{width:100%;max-width:340px;background:#151518;border:1px solid #2a2a30;border-radius:14px;padding:28px 24px;text-align:center}
+  h1{margin:0 0 6px;font-size:22px}
+  p{margin:0 0 20px;font-size:13px;color:#9a9aa3;line-height:1.5}
+  input{width:100%;background:#0c0c0e;border:1px solid #2a2a30;border-radius:9px;color:#eee;font-size:15px;padding:11px 12px;outline:none;margin-bottom:12px}
+  input:focus{border-color:#c9a24a}
+  button{width:100%;background:#c9a24a;color:#111;border:0;border-radius:9px;font-size:14px;font-weight:700;padding:11px;cursor:pointer}
+  button:disabled{opacity:.6;cursor:default}
+  .err{min-height:18px;margin:10px 0 0;font-size:12px;color:#e5645a}
+</style>
+</head>
+<body>
+  <form class="card" id="f" autocomplete="on">
+    <h1>🔒 Taller</h1>
+    <p>Acceso restringido. Ingresa la contraseña para continuar.</p>
+    <input type="password" id="pw" name="password" placeholder="Contraseña" autocomplete="current-password" autofocus required>
+    <button type="submit" id="btn">Entrar</button>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+<script>
+  const f = document.getElementById('f'), pw = document.getElementById('pw');
+  const btn = document.getElementById('btn'), err = document.getElementById('err');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    btn.disabled = true; err.textContent = '';
+    try {
+      const r = await fetch('/.netlify/functions/taller-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw.value }),
+        credentials: 'same-origin',
+      });
+      if (r.ok) { location.reload(); return; }
+      err.textContent = r.status === 401 ? 'Contraseña incorrecta' : 'Error al iniciar sesión';
+    } catch { err.textContent = 'Sin conexión con el servidor'; }
+    btn.disabled = false; pw.select();
+  });
+</script>
+</body>
+</html>
