@@ -628,7 +628,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
     </div>
 
     <!-- Publish -->
-    <div class="panel-block collapsible" id="pb-publish">
+    <div class="panel-block collapsible collapsed" id="pb-publish">
       <div class="pb-title" onclick="togglePanelBlock('pb-publish')">
         <span class="pb-title-text"><span class="pb-chevron">▾</span>Publicar</span>
       </div>
@@ -649,7 +649,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
       </div>
       <div class="field" id="scheduleDateField">
         <div class="fl">Programar para</div>
-        <input type="datetime-local" class="fi" id="scheduleDate" oninput="syncScheduleEcho()">
+        <input type="datetime-local" class="fi" id="scheduleDate">
       </div>
       <div class="field" id="suggestedTimesField">
         <div class="fl">Horarios sugeridos</div>
@@ -696,11 +696,8 @@ input[type=datetime-local].fi { color-scheme: dark; }
           <span style="font-size:12px;font-weight:600;color:var(--muted2);">Marcar como <strong style="color:var(--text);">Programado</strong> en Notion al exportar</span>
         </label>
         <div id="scheduleExportDateWrap" style="display:none;margin-bottom:7px;">
-          <div style="font-size:10px;color:var(--muted);line-height:1.5;">
-            Usa la fecha de <strong style="color:var(--text);">Publicar → Programar</strong>:
-            <span id="scheduleExportDateEcho" style="color:var(--accent);font-weight:600;">sin fecha</span>
-          </div>
-          <input type="datetime-local" id="scheduleExportDate" style="display:none;">
+          <div style="font-size:10px;color:var(--muted2);font-weight:600;letter-spacing:.04em;margin-bottom:4px;">Fecha programada</div>
+          <input type="datetime-local" class="fi" id="scheduleExportDate">
         </div>
 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;margin-bottom:7px;">
@@ -828,7 +825,7 @@ input[type=datetime-local].fi { color-scheme: dark; }
       </div>
     </div>
 
-    <div class="panel-block collapsible" id="pb-coverpreview">
+    <div class="panel-block collapsible collapsed" id="pb-coverpreview">
       <div class="pb-title" onclick="togglePanelBlock('pb-coverpreview')">
         <span class="pb-title-text"><span class="pb-chevron">▾</span>Preview portada</span>
       </div>
@@ -1279,7 +1276,6 @@ function loadStory(idx) {
     const sd = story.scheduledDate.slice(0, 16);
     document.getElementById('scheduleDate').value = sd.includes('T') ? sd : sd + 'T00:00';
   }
-  syncScheduleEcho();
 
   // Load bg image
   if (story.imageURL) {
@@ -1623,11 +1619,8 @@ async function exportVideo() {
   // Update Notion if "Programado" is checked
   const chkSchedule = document.getElementById('chkScheduleExport');
   if (chkSchedule?.checked && story?.id) {
-    // Una sola fecha: la del panel de Publicar (la misma con la que se programa
-    // el post en Facebook). El campo propio del panel de exportar queda sólo
-    // como respaldo, para no pedir la fecha dos veces.
-    const schedDate = document.getElementById('scheduleDate').value
-                   || document.getElementById('scheduleExportDate').value;
+    // Fecha propia del panel de Exportar (default: ahora, editable); ya no usa la de Publicar.
+    const schedDate = document.getElementById('scheduleExportDate').value;
     try {
       await updateNotionStatus(story.id, 'Programado', schedDate || null, 'Fecha de Publicacion');
       toast(`Exportación completa ✓ — Notion actualizado`, 'success');
@@ -2064,7 +2057,12 @@ async function updateNotionStatus(pageId, status, scheduledDateLocal, scheduledF
 function toggleScheduleExportDate() {
   const checked = document.getElementById('chkScheduleExport').checked;
   document.getElementById('scheduleExportDateWrap').style.display = checked ? 'block' : 'none';
-  if (checked) syncScheduleEcho();
+  // Por defecto: fecha y hora actuales (editable). Si ya había una, se respeta.
+  const inp = document.getElementById('scheduleExportDate');
+  if (checked && !inp.value) {
+    const d = new Date(), pad = n => String(n).padStart(2, '0');
+    inp.value = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
 }
 
 // Si "Publicar inmediatamente" está tildado, deshabilita visualmente la
@@ -2076,19 +2074,6 @@ function togglePublishNow() {
   document.getElementById('suggestedTimesField').style.opacity = now ? '.4' : '1';
   const btnFB = document.getElementById('btnPublishFB');
   btnFB.textContent = now ? '📘 Publicar ahora en Facebook' : '📘 Programar en Facebook';
-}
-
-// Refleja en el panel de exportar la fecha del panel de Publicar, que es la
-// única que se usa (para Facebook y para Notion).
-function syncScheduleEcho() {
-  const echo = document.getElementById('scheduleExportDateEcho');
-  if (!echo) return;
-  const val = document.getElementById('scheduleDate').value;
-  if (!val) { echo.textContent = 'sin fecha'; return; }
-  const d = new Date(val);
-  echo.textContent = isNaN(d) ? val : d.toLocaleString('es-MX', {
-    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
-  });
 }
 
 function setSuggestedTime(dayOfWeek) {
@@ -2105,7 +2090,6 @@ function setSuggestedTime(dayOfWeek) {
   const pad = n => String(n).padStart(2,'0');
   const val = `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())}T${pad(hh)}:${pad(mm)}`;
   document.getElementById('scheduleDate').value = val;
-  syncScheduleEcho();
 }
 
 // ════════════════════════════════════════════════════
@@ -2780,7 +2764,7 @@ function exportCover() {
 // Auto-cargar historias desde Notion al abrir la página, como si se le
 // diera click al botón — evita el paso manual en cada sesión.
 // setTimeout(0) para correr después del script de auto-env que server.js
-// inserta justo antes de </body> (precarga token/DB en localStorage) —
+// inserta al final del documento (precarga token/DB en localStorage) —
 // si no, loadFromNotion() se ejecutaría antes de que esa config exista.
 setTimeout(loadFromNotion, 0);
 

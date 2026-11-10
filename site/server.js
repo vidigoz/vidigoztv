@@ -1163,7 +1163,9 @@ function serveVidiclip(res) {
 `;
 
   // Insertar justo antes de </body>
-  html = html.replace('</body>', envScript + '\n</body>');
+  // lastIndexOf: un '</body>' dentro de un comentario/string del HTML no debe romper la inserción.
+  const bodyIdx = html.lastIndexOf('</body>');
+  html = bodyIdx === -1 ? html + envScript : html.slice(0, bodyIdx) + envScript + '\n' + html.slice(bodyIdx);
 
   const buf = Buffer.from(html, 'utf8');
   res.writeHead(200, {
